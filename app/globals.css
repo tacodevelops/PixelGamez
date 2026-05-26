@@ -214,11 +214,10 @@ h3 { font-size: var(--font-size-md); }
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   border-radius: var(--radius-md);
-  background: var(--accent-gradient);
-  box-shadow: 0 2px 12px var(--accent-primary-glow);
+  object-fit: contain;
 }
 .header__logo-text {
   font-size: var(--font-size-lg);
@@ -780,6 +779,22 @@ h3 { font-size: var(--font-size-md); }
 .game-player__btn--fullscreen:hover { 
   background: rgba(255, 255, 255, 0.2);
   border-color: rgba(255, 255, 255, 0.3);
+}
+.game-player__btn--fav {
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all var(--transition-fast);
+}
+.game-player__btn--fav:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+.game-player__btn--fav.active {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
 }
 .game-player__description-card {
   background: var(--bg-surface);
@@ -2840,8 +2855,8 @@ h3 { font-size: var(--font-size-md); }
   color: var(--text-primary);
 }
 .admin-tab.active {
-  background: var(--text-primary);
-  color: var(--bg-base);
+  background: var(--accent-purple);
+  color: #fff;
 }
 
 .admin-section-desc {
@@ -2888,6 +2903,10 @@ h3 { font-size: var(--font-size-md); }
 .admin-form__group select:focus {
   outline: none;
   border-color: var(--accent-purple);
+}
+.admin-form__group select option {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
 }
 
 .admin-form__submit {

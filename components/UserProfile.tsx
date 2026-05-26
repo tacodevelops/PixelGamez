@@ -12,7 +12,7 @@ interface ProfileUser {
   id: string;
   email: string;
   displayName: string;
-  role: 'user' | 'admin';
+  role: string;
   avatarUrl: string;
   createdAt: string;
   aboutMe: string;
@@ -388,7 +388,7 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
         </div>
         {favoriteGames.length > 0 ? (
           <div className="profile-games-row">
-            {favoriteGames.map(game => game && (
+            {favoriteGames.slice(0, 8).map(game => game && (
               <Link key={game.id} href={`/game/${game.id}`} className="profile-game-card">
                 <img src={game.thumbnail} alt={game.title} className="profile-game-card__img" />
                 <div className="profile-game-card__overlay">

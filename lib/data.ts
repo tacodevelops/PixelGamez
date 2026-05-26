@@ -82,7 +82,8 @@ function makeEmbed(seed: string): string {
 
 
 export const games: Game[] = [
-
+  { id: 'house-of-hazards', title: 'House of Hazards', description: 'Try to survive the House of Hazards! Watch out for traps set by your friends in this hilarious party game.', category: 'action', tags: ['new', 'popular'], thumbnail: '', embedUrl: 'https:
+  { id: 'basket-random', title: 'Basket Random', description: 'A fun, chaotic, and completely random physics-based basketball game!', category: 'sports', tags: ['new', 'popular'], thumbnail: '', embedUrl: 'https:
   { id: 'ninja-warrior', title: 'Ninja Warrior', description: 'Become the ultimate ninja! Slash through waves of enemies, dodge deadly traps, and master ancient combat techniques in this fast-paced action game.', category: 'action', tags: ['popular', 'featured'], thumbnail: '', embedUrl: makeEmbed('a10c1b9fc87747a9'), rating: 4.5, plays: 284300 },
   { id: 'zombie-survival', title: 'Zombie Survival', description: 'Survive the zombie apocalypse! Scavenge for weapons, build defenses, and fight off hordes of undead in this intense survival game.', category: 'action', tags: ['new'], thumbnail: '', embedUrl: makeEmbed('6b8c1f5e3d7a49b2'), rating: 4.2, plays: 156700 },
   { id: 'battle-royale', title: 'Battle Royale', description: 'Drop into an ever-shrinking arena and fight to be the last one standing. Loot weapons and outplay your opponents.', category: 'action', tags: ['popular'], thumbnail: '', embedUrl: makeEmbed('c2d4e6f8a0b2c4d6'), rating: 4.7, plays: 512000 },

@@ -7,10 +7,13 @@ import multer from 'multer';
 import cookieParser from 'cookie-parser';
 import { getVotes, addVote, removeVote } from './lib/votes';
 import { addSubmission, getApprovedSubmissions, getPendingSubmissions, getSubmissionsByUser, approveSubmission, rejectSubmission } from './lib/submissions';
-import { registerUser, loginUser, getUserById, getAllPublicUsers, getUserByDisplayName, isAdmin, isOwner, updateUserAvatar, updateUserBanner, updateUserProfile, updateUserBio, addFavoriteGame, removeFavoriteGame } from './lib/users';
+import { registerUser, getUserById, getAllPublicUsers, getUserByDisplayName, isAdmin, isOwner, updateUserAvatar, updateUserBanner, updateUserProfile, updateUserBio, addFavoriteGame, removeFavoriteGame } from './lib/users';
 import { getAllAds, getAdsByPlacement, addAd, toggleAd, deleteAd, recordImpression, recordClick } from './lib/ads';
-import { createSession, getSession, deleteSession, SESSION_COOKIE_NAME, SESSION_COOKIE_MAX_AGE } from './lib/sessions';
+import { createSession, deleteSession, SESSION_COOKIE_NAME, SESSION_COOKIE_MAX_AGE } from './lib/sessions';
 import { getNotifications, addNotification, deleteNotification } from './lib/notifications';
+import { prisma } from './lib/prisma';
+import { sendOTP } from './lib/email';
+import bcrypt from 'bcryptjs';
 import type { PublicUser } from './lib/users';
 
 const dev = process.env.NODE_ENV !== 'production';
@@ -62,13 +65,24 @@ const bannerUpload = multer({
 });
 
 
-function getAuthUser(req: Request): PublicUser | null {
+async function getAuthUser(req: Request): Promise<PublicUser | null> {
   const token = req.cookies?.[SESSION_COOKIE_NAME];
   if (!token) return null;
-  const session = getSession(token);
-  if (!session) return null;
-  const user = getUserById(session.userId);
-  return user || null;
+  const session = await prisma.session.findUnique({ where: { token } });
+  if (!session || session.expiresAt < new Date()) return null;
+  const user = await prisma.user.findUnique({ 
+    where: { id: session.userId },
+    include: { favoriteGames: { select: { id: true } } }
+  });
+  if (!user) return null;
+  const { passwordHash: _, ...rest } = user;
+  const publicUser: PublicUser = {
+    ...rest,
+    role: user.role as 'user' | 'moderator' | 'owner',
+    favoriteGames: user.favoriteGames.map(g => g.id),
+    createdAt: user.createdAt.toISOString(),
+  };
+  return publicUser;
 }
 
 app.prepare().then(() => {
@@ -84,61 +98,124 @@ app.prepare().then(() => {
 
   
 
-  server.post('/api/auth/register', (req: Request, res: Response) => {
-    const { email, password, displayName } = req.body;
-    if (!email || !password || !displayName) {
-      res.status(400).json({ error: 'Email, password, and display name are required.' });
+  server.post('/api/auth/register-otp', async (req: Request, res: Response) => {
+    const { email } = req.body;
+    if (!email) {
+      res.status(400).json({ error: 'Email is required.' });
+      return;
+    }
+    
+    const normalizedEmail = email.toLowerCase().trim();
+    const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (existingUser) {
+      res.status(400).json({ error: 'An account with this email already exists.' });
       return;
     }
 
-    const result = registerUser(email, password, displayName);
-    if (result.error) {
-      res.status(400).json({ error: result.error });
+    
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); 
+
+    await prisma.verificationCode.upsert({
+      where: { email: normalizedEmail },
+      update: { code, expiresAt },
+      create: { email: normalizedEmail, code, expiresAt }
+    });
+
+    await sendOTP(normalizedEmail, code);
+    res.json({ success: true });
+  });
+
+  server.post('/api/auth/register', async (req: Request, res: Response) => {
+    const { email, password, displayName, code } = req.body;
+    if (!email || !password || !displayName || !code) {
+      res.status(400).json({ error: 'Email, password, display name, and code are required.' });
       return;
     }
 
-    const token = createSession(result.user!.id);
+    const normalizedEmail = email.toLowerCase().trim();
+    
+    const verification = await prisma.verificationCode.findUnique({ where: { email: normalizedEmail } });
+    if (!verification || verification.code !== code || verification.expiresAt < new Date()) {
+      res.status(400).json({ error: 'Invalid or expired verification code.' });
+      return;
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (existingUser) {
+      res.status(400).json({ error: 'An account with this email already exists.' });
+      return;
+    }
+
+    if (password.length < 6) {
+      res.status(400).json({ error: 'Password must be at least 6 characters.' });
+      return;
+    }
+
+    const salt = bcrypt.genSaltSync(10);
+    const passwordHash = bcrypt.hashSync(password, salt);
+
+    const newUser = await prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        displayName: displayName.trim(),
+        passwordHash,
+        role: normalizedEmail === 'dahiruhammajam@gmail.com' ? 'owner' : 'user',
+      }
+    });
+
+    await prisma.verificationCode.delete({ where: { email: normalizedEmail } });
+
+    const token = await createSession(newUser.id);
     res.cookie(SESSION_COOKIE_NAME, token, {
       httpOnly: true,
       maxAge: SESSION_COOKIE_MAX_AGE * 1000,
       sameSite: 'lax',
       path: '/',
     });
-    res.json({ user: result.user });
+    
+    const { passwordHash: _, ...publicUser } = newUser;
+    res.json({ user: publicUser });
   });
 
-  server.post('/api/auth/login', (req: Request, res: Response) => {
+  server.post('/api/auth/login', async (req: Request, res: Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
       res.status(400).json({ error: 'Email and password are required.' });
       return;
     }
 
-    const result = loginUser(email, password);
-    if (result.error) {
-      res.status(401).json({ error: result.error });
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await prisma.user.findUnique({ 
+      where: { email: normalizedEmail },
+      include: { favoriteGames: { select: { id: true } } }
+    });
+    if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
+      res.status(401).json({ error: 'Invalid email or password.' });
       return;
     }
 
-    const token = createSession(result.user!.id);
+    const token = await createSession(user.id);
     res.cookie(SESSION_COOKIE_NAME, token, {
       httpOnly: true,
       maxAge: SESSION_COOKIE_MAX_AGE * 1000,
       sameSite: 'lax',
       path: '/',
     });
-    res.json({ user: result.user });
+    const { passwordHash: _, ...rest } = user;
+    const publicUser = { ...rest, favoriteGames: user.favoriteGames.map(g => g.id) };
+    res.json({ user: publicUser });
   });
 
-  server.post('/api/auth/logout', (req: Request, res: Response) => {
+  server.post('/api/auth/logout', async (req: Request, res: Response) => {
     const token = req.cookies?.[SESSION_COOKIE_NAME];
-    if (token) deleteSession(token);
+    if (token) await deleteSession(token);
     res.clearCookie(SESSION_COOKIE_NAME, { path: '/' });
     res.json({ success: true });
   });
 
-  server.get('/api/auth/me', (req: Request, res: Response) => {
-    const user = getAuthUser(req);
+  server.get('/api/auth/me', async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
     if (!user) {
       res.json({ user: null });
       return;
@@ -148,8 +225,8 @@ app.prepare().then(() => {
 
   
 
-  server.post('/api/auth/avatar', avatarUpload.single('avatar'), (req: Request, res: Response) => {
-    const user = getAuthUser(req);
+  server.post('/api/auth/avatar', avatarUpload.single('avatar'), async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
     if (!user) { res.status(401).json({ error: 'Not authenticated.' }); return; }
 
     if (!req.file) { res.status(400).json({ error: 'No image uploaded.' }); return; }
@@ -172,8 +249,8 @@ app.prepare().then(() => {
     res.json({ user: updated });
   });
 
-  server.post('/api/auth/banner', bannerUpload.single('banner'), (req: Request, res: Response) => {
-    const user = getAuthUser(req);
+  server.post('/api/auth/banner', bannerUpload.single('banner'), async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
     if (!user) { res.status(401).json({ error: 'Not authenticated.' }); return; }
 
     if (!req.file) { res.status(400).json({ error: 'No image uploaded.' }); return; }
@@ -196,8 +273,8 @@ app.prepare().then(() => {
     res.json({ user: updated });
   });
 
-  server.post('/api/auth/banner-color', (req: Request, res: Response) => {
-    const user = getAuthUser(req);
+  server.post('/api/auth/banner-color', async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
     if (!user) { res.status(401).json({ error: 'Not authenticated.' }); return; }
 
     const { color } = req.body;
@@ -215,8 +292,8 @@ app.prepare().then(() => {
     res.json({ user: updated });
   });
 
-  server.post('/api/auth/profile', (req: Request, res: Response) => {
-    const user = getAuthUser(req);
+  server.post('/api/auth/profile', async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
     if (!user) { res.status(401).json({ error: 'Not authenticated.' }); return; }
 
     const { displayName } = req.body;
@@ -226,13 +303,13 @@ app.prepare().then(() => {
 
   
 
-  server.get('/api/votes/:gameId', (req: Request, res: Response) => {
-    const votes = getVotes(req.params.gameId as string);
+  server.get('/api/votes/:gameId', async (req: Request, res: Response) => {
+    const votes = await getVotes(req.params.gameId as string);
     res.json(votes);
   });
 
-  server.post('/api/votes/:gameId', (req: Request, res: Response) => {
-    const user = getAuthUser(req);
+  server.post('/api/votes/:gameId', async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
     if (!user) {
       res.status(401).json({ error: 'Sign in to vote.' });
       return;
@@ -250,24 +327,24 @@ app.prepare().then(() => {
       return;
     }
 
-    const votes = action === 'add' ? addVote(gameId, type as 'like' | 'dislike') : removeVote(gameId, type as 'like' | 'dislike');
+    const votes = action === 'add' ? await addVote(gameId, user.id, type as 'like' | 'dislike') : await removeVote(gameId, user.id);
     res.json(votes);
   });
 
   
 
-  server.get('/api/developer/games', (_req: Request, res: Response) => {
-    res.json(getApprovedSubmissions());
+  server.get('/api/developer/games', async (_req: Request, res: Response) => {
+    res.json(await getApprovedSubmissions());
   });
 
-  server.get('/api/developer/my-games', (req: Request, res: Response) => {
-    const user = getAuthUser(req);
+  server.get('/api/developer/my-games', async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
     if (!user) { res.status(401).json({ error: 'Not authenticated.' }); return; }
-    res.json(getSubmissionsByUser(user.id));
+    res.json(await getSubmissionsByUser(user.id));
   });
 
-  server.post('/api/developer/submit', upload.single('gameFile'), (req: Request, res: Response) => {
-    const user = getAuthUser(req);
+  server.post('/api/developer/submit', upload.single('gameFile'), async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
     if (!user) {
       res.status(401).json({ error: 'Sign in to submit games.' });
       return;
@@ -302,7 +379,7 @@ app.prepare().then(() => {
         return;
       }
 
-      const submission = addSubmission({
+      const submission = await addSubmission({
         title,
         description,
         category,
@@ -324,67 +401,81 @@ app.prepare().then(() => {
 
   
 
-  server.get('/api/admin/pending', (req: Request, res: Response) => {
-    const user = getAuthUser(req);
+  server.get('/api/admin/pending', async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
     if (!user || !isAdmin(user.id)) {
       res.status(403).json({ error: 'Admin access required.' });
       return;
     }
-    res.json(getPendingSubmissions());
+    res.json(await getPendingSubmissions());
   });
 
-  server.post('/api/admin/approve/:id', (req: Request, res: Response) => {
-    const user = getAuthUser(req);
+  server.post('/api/admin/approve/:id', async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
     if (!user || !isAdmin(user.id)) {
       res.status(403).json({ error: 'Admin access required.' });
       return;
     }
-    const result = approveSubmission(req.params.id as string, user.id);
+    const result = await approveSubmission(req.params.id as string, user.id);
     if (!result) { res.status(404).json({ error: 'Submission not found.' }); return; }
     res.json({ success: true, game: result });
   });
 
-  server.post('/api/admin/reject/:id', (req: Request, res: Response) => {
-    const user = getAuthUser(req);
+  server.post('/api/admin/reject/:id', async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
     if (!user || !isAdmin(user.id)) {
       res.status(403).json({ error: 'Admin access required.' });
       return;
     }
-    const result = rejectSubmission(req.params.id as string, user.id);
+    const result = await rejectSubmission(req.params.id as string, user.id);
     if (!result) { res.status(404).json({ error: 'Submission not found.' }); return; }
     res.json({ success: true, game: result });
   });
 
   
 
-  server.get('/api/users/:id', (req: Request, res: Response) => {
+  server.get('/api/users/:id', async (req: Request, res: Response) => {
     const user = getUserById(req.params.id as string);
     if (!user) { res.status(404).json({ error: 'User not found.' }); return; }
-    const submissions = getSubmissionsByUser(user.id).filter(s => s.status === 'approved');
+    const allSubmissions = await getSubmissionsByUser(user.id);
+    const submissions = allSubmissions.filter(s => s.status === 'approved');
     res.json({ user, submissions });
   });
 
-  server.post('/api/auth/bio', (req: Request, res: Response) => {
-    const user = getAuthUser(req);
+  server.post('/api/auth/bio', async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
     if (!user) { res.status(401).json({ error: 'Not authenticated.' }); return; }
     const { aboutMe, workingOn, country } = req.body;
     const updated = updateUserBio(user.id, { aboutMe, workingOn, country });
     res.json({ user: updated });
   });
 
-  server.post('/api/auth/favorite/:gameId', (req: Request, res: Response) => {
-    const user = getAuthUser(req);
+  server.post('/api/auth/favorite/:gameId', async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
     if (!user) { res.status(401).json({ error: 'Not authenticated.' }); return; }
     const gameId = req.params.gameId as string;
     const { action } = req.body; 
-    const updated = action === 'remove'
-      ? removeFavoriteGame(user.id, gameId)
-      : addFavoriteGame(user.id, gameId);
-    if (!updated) { res.status(404).json({ error: 'User not found.' }); return; }
-    res.json({ user: updated });
+
+    try {
+      const updated = await prisma.user.update({
+        where: { id: user.id },
+        data: action === 'remove' 
+          ? { favoriteGames: { disconnect: { id: gameId } } }
+          : { favoriteGames: { connect: { id: gameId } } },
+        include: { favoriteGames: { select: { id: true } } }
+      });
+      const publicUser = {
+        ...updated,
+        favoriteGames: updated.favoriteGames.map(g => g.id),
+      };
+      delete (publicUser as any).passwordHash;
+      res.json({ user: publicUser });
+    } catch (e) {
+      res.status(500).json({ error: 'Failed to update favorites.' });
+    }
   });
 
-  server.get('/api/users/lookup/:name', (req: Request, res: Response) => {
+  server.get('/api/users/lookup/:name', async (req: Request, res: Response) => {
     const user = getUserByDisplayName(req.params.name as string);
     if (!user) { res.status(404).json({ error: 'User not found.' }); return; }
     res.json({ id: user.id, displayName: user.displayName });
@@ -392,35 +483,53 @@ app.prepare().then(() => {
 
   
 
-  server.get('/api/ads/:placement', (req: Request, res: Response) => {
+  server.get('/api/ads/:placement', async (req: Request, res: Response) => {
     
     const placement = req.params.placement as string;
-    const ads = getAdsByPlacement(placement);
+    const ads = await getAdsByPlacement(placement);
     res.json(ads);
   });
 
-  server.post('/api/ads/:id/click', (req: Request, res: Response) => {
+  server.post('/api/ads/:id/click', async (req: Request, res: Response) => {
     
-    recordClick(req.params.id as string);
+    await recordClick(req.params.id as string);
     res.json({ success: true });
   });
 
-  server.post('/api/ads/:id/impression', (req: Request, res: Response) => {
+  server.post('/api/ads/:id/impression', async (req: Request, res: Response) => {
     
-    recordImpression(req.params.id as string);
+    await recordImpression(req.params.id as string);
     res.json({ success: true });
   });
 
   
   
-  server.get('/api/admin/ads', (req: Request, res: Response) => {
-    const user = getAuthUser(req);
+  server.get('/api/admin/analytics', async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
+    if (!user || !isOwner(user.id)) {
+      res.status(403).json({ error: 'Access denied' });
+      return;
+    }
+    
+    try {
+      const analytics = await prisma.game.findMany({
+        orderBy: { plays: 'desc' },
+        include: { _count: { select: { favoritedBy: true } } }
+      });
+      res.json(analytics);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch analytics' });
+    }
+  });
+
+  server.get('/api/admin/ads', async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
     if (!user || !isOwner(user.id)) { res.status(403).json({ error: 'Forbidden' }); return; }
-    res.json(getAllAds());
+    res.json(await getAllAds());
   });
 
-  server.post('/api/admin/ads', upload.single('image'), (req: Request, res: Response) => {
-    const user = getAuthUser(req);
+  server.post('/api/admin/ads', upload.single('image'), async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
     if (!user || !isOwner(user.id)) { res.status(403).json({ error: 'Forbidden' }); return; }
     
     if (!req.file) { res.status(400).json({ error: 'Image is required.' }); return; }
@@ -433,34 +542,34 @@ app.prepare().then(() => {
     fs.renameSync(req.file.path, newPath);
 
     const imageUrl = `/api/uploads/${newFilename}`;
-    const ad = addAd({ imageUrl, linkUrl, placement: placement as any, label });
+    const ad = await addAd({ imageUrl, linkUrl, placement: placement as any, label });
     res.json(ad);
   });
 
-  server.post('/api/admin/ads/:id/toggle', (req: Request, res: Response) => {
-    const user = getAuthUser(req);
+  server.post('/api/admin/ads/:id/toggle', async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
     if (!user || !isOwner(user.id)) { res.status(403).json({ error: 'Forbidden' }); return; }
-    const updated = toggleAd(req.params.id as string);
+    const updated = await toggleAd(req.params.id as string);
     if (!updated) { res.status(404).json({ error: 'Ad not found' }); return; }
     res.json(updated);
   });
 
-  server.delete('/api/admin/ads/:id', (req: Request, res: Response) => {
-    const user = getAuthUser(req);
+  server.delete('/api/admin/ads/:id', async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
     if (!user || !isOwner(user.id)) { res.status(403).json({ error: 'Forbidden' }); return; }
-    const success = deleteAd(req.params.id as string);
+    const success = await deleteAd(req.params.id as string);
     if (!success) { res.status(404).json({ error: 'Ad not found' }); return; }
     res.json({ success: true });
   });
 
   
   
-  server.get('/api/notifications', (req: Request, res: Response) => {
-    res.json(getNotifications());
+  server.get('/api/notifications', async (req: Request, res: Response) => {
+    res.json(await getNotifications());
   });
 
-  server.post('/api/admin/notifications', (req: Request, res: Response) => {
-    const user = getAuthUser(req);
+  server.post('/api/admin/notifications', async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
     if (!user || (!isOwner(user.id) && !isAdmin(user.id))) {
       res.status(403).json({ error: 'Forbidden' });
       return;
@@ -470,17 +579,17 @@ app.prepare().then(() => {
       res.status(400).json({ error: 'Title and message are required.' });
       return;
     }
-    const notif = addNotification(title, message);
+    const notif = await addNotification(title, message);
     res.json(notif);
   });
 
-  server.delete('/api/admin/notifications/:id', (req: Request, res: Response) => {
-    const user = getAuthUser(req);
+  server.delete('/api/admin/notifications/:id', async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
     if (!user || (!isOwner(user.id) && !isAdmin(user.id))) {
       res.status(403).json({ error: 'Forbidden' });
       return;
     }
-    deleteNotification(req.params.id as string);
+    await deleteNotification(req.params.id as string);
     res.json({ success: true });
   });
 

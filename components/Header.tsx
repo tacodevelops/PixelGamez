@@ -106,9 +106,7 @@ export default function Header() {
     <header className="header">
       <div className="header__left">
         <Link href="/" className="header__logo">
-          <div className="header__logo-icon">
-            <span>P</span>
-          </div>
+          <img src="/images/logo.png" alt="PixelGamez Logo" className="header__logo-icon" />
           <span className="header__logo-text">PixelGamez</span>
         </Link>
       </div>

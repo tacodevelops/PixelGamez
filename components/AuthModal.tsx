@@ -4,12 +4,14 @@ import { useState, FormEvent } from 'react';
 import { useAuth } from './AuthContext';
 
 export default function AuthModal() {
-  const { showAuthModal, closeAuthModal, login, register } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const { showAuthModal, closeAuthModal, login, register, requestOTP } = useAuth();
+  const [mode, setMode] = useState<'login' | 'register' | 'otp'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [code, setCode] = useState('');
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   if (!showAuthModal) return null;
@@ -18,12 +20,16 @@ export default function AuthModal() {
     setEmail('');
     setPassword('');
     setDisplayName('');
+    setCode('');
     setError('');
+    setSuccessMsg('');
   };
 
-  const switchMode = (newMode: 'login' | 'register') => {
+  const switchMode = (newMode: 'login' | 'register' | 'otp') => {
     setMode(newMode);
-    resetForm();
+    if (newMode !== 'otp') {
+      resetForm();
+    }
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -35,13 +41,24 @@ export default function AuthModal() {
       let result;
       if (mode === 'login') {
         result = await login(email, password);
-      } else {
-        result = await register(email, password, displayName);
+      } else if (mode === 'register') {
+        result = await requestOTP(email);
+        if (!result.error) {
+          switchMode('otp');
+          setSubmitting(false);
+          return;
+        }
+      } else if (mode === 'otp') {
+        result = await register(email, password, displayName, code);
       }
       if (result.error) {
         setError(result.error);
       } else {
-        resetForm();
+        setSuccessMsg('Successfully logged in!');
+        setTimeout(() => {
+          resetForm();
+          closeAuthModal();
+        }, 1500);
       }
     } catch {
       setError('Something went wrong. Try again.');
@@ -80,52 +97,75 @@ export default function AuthModal() {
         </div>
 
         <form onSubmit={handleSubmit} className="auth-modal__form">
-          {mode === 'register' && (
+          {mode === 'otp' && (
             <div className="auth-modal__field">
-              <label htmlFor="auth-name">Display Name</label>
+              <label htmlFor="auth-code">Verification Code</label>
               <input
-                id="auth-name"
+                id="auth-code"
                 type="text"
-                placeholder="What should we call you?"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="6-digit code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
                 required
-                autoComplete="name"
+                maxLength={6}
               />
+              <p style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
+                We sent a code to {email}
+              </p>
             </div>
           )}
 
-          <div className="auth-modal__field">
-            <label htmlFor="auth-email">Email</label>
-            <input
-              id="auth-email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-          </div>
+          {mode !== 'otp' && (
+            <>
+              {mode === 'register' && (
+                <div className="auth-modal__field">
+                  <label htmlFor="auth-name">Display Name</label>
+                  <input
+                    id="auth-name"
+                    type="text"
+                    placeholder="What should we call you?"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    required
+                    autoComplete="name"
+                  />
+                </div>
+              )}
 
-          <div className="auth-modal__field">
-            <label htmlFor="auth-password">Password</label>
-            <input
-              id="auth-password"
-              type="password"
-              placeholder={mode === 'register' ? 'Min 6 characters' : 'Your password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={mode === 'register' ? 6 : undefined}
-              autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
-            />
-          </div>
+              <div className="auth-modal__field">
+                <label htmlFor="auth-email">Email</label>
+                <input
+                  id="auth-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                />
+              </div>
 
-          {error && <div className="auth-modal__error">{error}</div>}
+              <div className="auth-modal__field">
+                <label htmlFor="auth-password">Password</label>
+                <input
+                  id="auth-password"
+                  type="password"
+                  placeholder={mode === 'register' ? 'Min 6 characters' : 'Your password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={mode === 'register' ? 6 : undefined}
+                  autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+                />
+              </div>
+            </>
+          )}
 
-          <button type="submit" className="auth-modal__submit" disabled={submitting}>
-            {submitting ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+          {error && <div className="auth-modal__error" style={{ color: 'red', marginTop: '10px' }}>{error}</div>}
+          {successMsg && <div className="auth-modal__success" style={{ color: '#10b981', marginTop: '10px', textAlign: 'center', fontWeight: 'bold' }}>{successMsg}</div>}
+
+          <button type="submit" className="auth-modal__submit" disabled={submitting || !!successMsg}>
+            {submitting ? 'Please wait...' : mode === 'login' ? 'Sign In' : mode === 'otp' ? 'Verify & Create Account' : 'Continue'}
           </button>
         </form>
 

@@ -24,7 +24,8 @@ interface AuthContextType {
   openAuthModal: () => void;
   closeAuthModal: () => void;
   login: (email: string, password: string) => Promise<{ error?: string }>;
-  register: (email: string, password: string, displayName: string) => Promise<{ error?: string }>;
+  register: (email: string, password: string, displayName: string, code: string) => Promise<{ error?: string }>;
+  requestOTP: (email: string) => Promise<{ error?: string }>;
   logout: () => Promise<void>;
   uploadAvatar: (file: File) => Promise<{ error?: string }>;
   updateBio: (data: { aboutMe?: string; workingOn?: string; country?: string }) => Promise<{ error?: string }>;
@@ -64,21 +65,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await res.json();
     if (!res.ok) return { error: data.error || 'Login failed.' };
     setUser(data.user);
-    setShowAuthModal(false);
+    return { success: true };
+  };
+
+  const requestOTP = async (email: string) => {
+    const res = await fetch('/api/auth/register-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { error: data.error || 'Failed to send OTP.' };
     return {};
   };
 
-  const register = async (email: string, password: string, displayName: string) => {
+  const register = async (email: string, password: string, displayName: string, code: string) => {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, displayName }),
+      body: JSON.stringify({ email, password, displayName, code }),
     });
     const data = await res.json();
     if (!res.ok) return { error: data.error || 'Registration failed.' };
     setUser(data.user);
-    setShowAuthModal(false);
-    return {};
+    return { success: true };
   };
 
   const logout = async () => {
@@ -136,6 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       closeAuthModal: () => setShowAuthModal(false),
       login,
       register,
+      requestOTP,
       logout,
       uploadAvatar,
       updateBio,

@@ -29,7 +29,7 @@ interface Ad {
 
 export default function AdminPage() {
   const { isLoggedIn, isOwner, isModerator, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<'submissions' | 'ads' | 'notices'>('submissions');
+  const [activeTab, setActiveTab] = useState<'submissions' | 'ads' | 'notices' | 'analytics'>('submissions');
   
   
   const [pending, setPending] = useState<Submission[]>([]);
@@ -50,11 +50,16 @@ export default function AdminPage() {
   const [noticeForm, setNoticeForm] = useState({ title: '', message: '' });
   const [creatingNotice, setCreatingNotice] = useState(false);
 
+  // Analytics State
+  const [analytics, setAnalytics] = useState<any[]>([]);
+  const [fetchingAnalytics, setFetchingAnalytics] = useState(false);
+
   useEffect(() => {
     if (!loading && (isOwner || isModerator)) {
       if (activeTab === 'submissions') fetchPending();
       if (activeTab === 'ads' && isOwner) fetchAds();
       if (activeTab === 'notices') fetchNotices();
+      if (activeTab === 'analytics' && isOwner) fetchAnalytics();
     } else {
       setFetchingSubmissions(false);
       setFetchingAds(false);
@@ -68,6 +73,14 @@ export default function AdminPage() {
       const res = await fetch('/api/notifications');
       if (res.ok) setNotices(await res.json());
     } catch {} finally { setFetchingNotices(false); }
+  }
+
+  async function fetchAnalytics() {
+    setFetchingAnalytics(true);
+    try {
+      const res = await fetch('/api/admin/analytics');
+      if (res.ok) setAnalytics(await res.json());
+    } catch {} finally { setFetchingAnalytics(false); }
   }
 
   async function handleNoticeSubmit(e: React.FormEvent) {
@@ -204,9 +217,14 @@ export default function AdminPage() {
             Pending Submissions
           </button>
           {isOwner && (
-            <button className={`admin-tab ${activeTab === 'ads' ? 'active' : ''}`} onClick={() => setActiveTab('ads')}>
-              Ad Management
-            </button>
+            <>
+              <button className={`admin-tab ${activeTab === 'ads' ? 'active' : ''}`} onClick={() => setActiveTab('ads')}>
+                Ad Management
+              </button>
+              <button className={`admin-tab ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')}>
+                Game Analytics
+              </button>
+            </>
           )}
           <button className={`admin-tab ${activeTab === 'notices' ? 'active' : ''}`} onClick={() => setActiveTab('notices')}>
             Notices & Inbox
@@ -383,6 +401,38 @@ export default function AdminPage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {activeTab === 'analytics' && isOwner && (
+        <div className="admin-section">
+          <p className="admin-section-desc">View stats and analytics for all games.</p>
+          {fetchingAnalytics ? (
+            <div className="admin-loading">Loading analytics...</div>
+          ) : (
+            <div className="admin-card" style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-dim)' }}>
+                    <th style={{ padding: '12px' }}>Game</th>
+                    <th style={{ padding: '12px' }}>Plays</th>
+                    <th style={{ padding: '12px' }}>Rating</th>
+                    <th style={{ padding: '12px' }}>Favorites</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {analytics.map((game: any) => (
+                    <tr key={game.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '12px', fontWeight: 'bold' }}>{game.title}</td>
+                      <td style={{ padding: '12px', color: 'var(--accent-primary)' }}>{game.plays.toLocaleString()}</td>
+                      <td style={{ padding: '12px' }}>{game.rating.toFixed(1)} ⭐</td>
+                      <td style={{ padding: '12px' }}>{game._count?.favoritedBy || 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

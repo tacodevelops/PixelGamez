@@ -1,84 +1,51 @@
-import fs from 'fs';
-import path from 'path';
+import { prisma } from './prisma';
 
-const VOTES_FILE = path.join(process.cwd(), 'data', 'votes.json');
-
-interface VoteData {
-  likes: number;
-  dislikes: number;
+export async function getVotes(gameId: string) {
+  const likes = await prisma.vote.count({ where: { gameId, type: 'like' } });
+  const dislikes = await prisma.vote.count({ where: { gameId, type: 'dislike' } });
+  return { likes, dislikes };
 }
 
-type VotesStore = Record<string, VoteData>;
-
-
-let votesCache: VotesStore | null = null;
-
-function ensureDataDir(): void {
-  const dir = path.dirname(VOTES_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
-
-function readVotes(): VotesStore {
-  if (votesCache) return votesCache;
-
-  ensureDataDir();
-
-  try {
-    if (fs.existsSync(VOTES_FILE)) {
-      const raw = fs.readFileSync(VOTES_FILE, 'utf-8');
-      votesCache = JSON.parse(raw) as VotesStore;
-    } else {
-      votesCache = {};
-      fs.writeFileSync(VOTES_FILE, '{}', 'utf-8');
+export async function addVote(gameId: string, userId: string, type: 'like' | 'dislike') {
+  const existing = await prisma.vote.findFirst({
+    where: { gameId, userId }
+  });
+  if (existing) {
+    if (existing.type !== type) {
+      await prisma.vote.update({ where: { id: existing.id }, data: { type } });
     }
-  } catch {
-    votesCache = {};
-  }
-
-  return votesCache;
-}
-
-function writeVotes(data: VotesStore): void {
-  ensureDataDir();
-  votesCache = data;
-  fs.writeFileSync(VOTES_FILE, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-export function getVotes(gameId: string): VoteData {
-  const votes = readVotes();
-  return votes[gameId] || { likes: 0, dislikes: 0 };
-}
-
-export function addVote(gameId: string, type: 'like' | 'dislike'): VoteData {
-  const votes = readVotes();
-  if (!votes[gameId]) {
-    votes[gameId] = { likes: 0, dislikes: 0 };
-  }
-
-  if (type === 'like') {
-    votes[gameId].likes = Math.max(0, votes[gameId].likes + 1);
   } else {
-    votes[gameId].dislikes = Math.max(0, votes[gameId].dislikes + 1);
-  }
+    
+    
+    
+    
+    
+    
+    
+    await prisma.game.upsert({
+      where: { id: gameId },
+      update: {},
+      create: {
+        id: gameId,
+        title: gameId,
+        description: '',
+        category: 'unknown',
+        thumbnail: '',
+        embedUrl: ''
+      }
+    });
 
-  writeVotes(votes);
-  return votes[gameId];
+    await prisma.vote.create({ data: { gameId, userId, type } });
+  }
+  return getVotes(gameId);
 }
 
-export function removeVote(gameId: string, type: 'like' | 'dislike'): VoteData {
-  const votes = readVotes();
-  if (!votes[gameId]) {
-    votes[gameId] = { likes: 0, dislikes: 0 };
+export async function removeVote(gameId: string, userId: string) {
+  const existing = await prisma.vote.findFirst({
+    where: { gameId, userId }
+  });
+  if (existing) {
+    await prisma.vote.delete({ where: { id: existing.id } });
   }
-
-  if (type === 'like') {
-    votes[gameId].likes = Math.max(0, votes[gameId].likes - 1);
-  } else {
-    votes[gameId].dislikes = Math.max(0, votes[gameId].dislikes - 1);
-  }
-
-  writeVotes(votes);
-  return votes[gameId];
+  return getVotes(gameId);
 }

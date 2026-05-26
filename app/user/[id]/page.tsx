@@ -1,17 +1,30 @@
-import { getUserById } from '../../../lib/users';
 import { getSubmissionsByUser } from '../../../lib/submissions';
 import UserProfile from '../../../components/UserProfile';
 import { notFound } from 'next/navigation';
+import { prisma } from '../../../lib/prisma';
+import { games } from '../../../lib/data';
 
 export default async function UserPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const user = getUserById(id);
+  
+  const dbUser = await prisma.user.findUnique({
+    where: { id },
+    include: { favoriteGames: { select: { id: true } } }
+  });
 
-  if (!user) {
+  if (!dbUser) {
     notFound();
   }
 
-  const submissions = getSubmissionsByUser(id).filter(s => s.status === 'approved');
+  
+  const user = {
+    ...dbUser,
+    favoriteGames: dbUser.favoriteGames.map(g => g.id)
+  };
+  delete (user as any).passwordHash;
+
+  const allSubmissions = await getSubmissionsByUser(id);
+  const submissions = allSubmissions.filter(s => s.status === 'approved');
 
   return (
     <div className="animate-fade-in">
