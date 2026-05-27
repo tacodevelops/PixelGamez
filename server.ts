@@ -246,8 +246,17 @@ app.prepare().then(() => {
 
     fs.renameSync(req.file.path, destPath);
     const avatarUrl = `/avatars/${filename}?t=${Date.now()}`;
-    const updated = updateUserAvatar(user.id, avatarUrl);
-    res.json({ success: true, avatarUrl });
+    
+    try {
+      const updated = await prisma.user.update({
+        where: { id: user.id },
+        data: { avatarUrl }
+      });
+      const { passwordHash: _, ...publicUser } = updated;
+      res.json({ success: true, user: publicUser });
+    } catch (e) {
+      res.status(500).json({ error: 'Failed to update avatar.' });
+    }
   });
 
   server.post('/api/auth/banner', bannerUpload.single('banner'), async (req: Request, res: Response) => {
@@ -269,8 +278,17 @@ app.prepare().then(() => {
 
     fs.renameSync(req.file.path, destPath);
     const bannerUrl = `/banners/${filename}?t=${Date.now()}`;
-    const updated = updateUserBanner(user.id, bannerUrl);
-    res.json({ success: true, bannerUrl });
+    
+    try {
+      const updated = await prisma.user.update({
+        where: { id: user.id },
+        data: { bannerUrl }
+      });
+      const { passwordHash: _, ...publicUser } = updated;
+      res.json({ success: true, user: publicUser });
+    } catch (e) {
+      res.status(500).json({ error: 'Failed to update banner.' });
+    }
   });
 
   server.post('/api/auth/banner-color', async (req: Request, res: Response) => {
@@ -288,8 +306,16 @@ app.prepare().then(() => {
       }
     } catch {  }
 
-    const updated = updateUserBanner(user.id, color);
-    res.json({ user: updated });
+    try {
+      const updated = await prisma.user.update({
+        where: { id: user.id },
+        data: { bannerUrl: color }
+      });
+      const { passwordHash: _, ...publicUser } = updated;
+      res.json({ user: publicUser });
+    } catch (e) {
+      res.status(500).json({ error: 'Failed to update banner.' });
+    }
   });
 
   server.post('/api/auth/profile', async (req: Request, res: Response) => {
@@ -297,8 +323,16 @@ app.prepare().then(() => {
     if (!user) { res.status(401).json({ error: 'Not authenticated.' }); return; }
 
     const { displayName } = req.body;
-    const updated = updateUserProfile(user.id, { displayName });
-    res.json({ user: updated });
+    try {
+      const updated = await prisma.user.update({
+        where: { id: user.id },
+        data: { displayName: displayName.trim() }
+      });
+      const { passwordHash: _, ...publicUser } = updated;
+      res.json({ user: publicUser });
+    } catch (e) {
+      res.status(500).json({ error: 'Failed to update profile.' });
+    }
   });
 
   
@@ -479,8 +513,20 @@ app.prepare().then(() => {
     const user = await getAuthUser(req);
     if (!user) { res.status(401).json({ error: 'Not authenticated.' }); return; }
     const { aboutMe, workingOn, country } = req.body;
-    const updated = updateUserBio(user.id, { aboutMe, workingOn, country });
-    res.json({ user: updated });
+    try {
+      const updated = await prisma.user.update({
+        where: { id: user.id },
+        data: { 
+          aboutMe: aboutMe !== undefined ? aboutMe.slice(0, 500) : undefined,
+          workingOn: workingOn !== undefined ? workingOn.slice(0, 500) : undefined,
+          country: country !== undefined ? country.slice(0, 60) : undefined
+        }
+      });
+      const { passwordHash: _, ...publicUser } = updated;
+      res.json({ user: publicUser });
+    } catch (e) {
+      res.status(500).json({ error: 'Failed to update bio.' });
+    }
   });
 
   server.post('/api/auth/favorite/:gameId', async (req: Request, res: Response) => {
@@ -539,7 +585,7 @@ app.prepare().then(() => {
   
   server.get('/api/admin/analytics', async (req: Request, res: Response) => {
     const user = await getAuthUser(req);
-    if (!user || !isOwner(user.id)) {
+    if (!user || user.role !== 'owner') {
       res.status(403).json({ error: 'Access denied' });
       return;
     }
@@ -560,7 +606,7 @@ app.prepare().then(() => {
 
   server.get('/api/admin/analytics/:id', async (req: Request, res: Response) => {
     const user = await getAuthUser(req);
-    if (!user || !isOwner(user.id)) {
+    if (!user || user.role !== 'owner') {
       res.status(403).json({ error: 'Access denied' });
       return;
     }
@@ -586,13 +632,13 @@ app.prepare().then(() => {
 
   server.get('/api/admin/ads', async (req: Request, res: Response) => {
     const user = await getAuthUser(req);
-    if (!user || !isOwner(user.id)) { res.status(403).json({ error: 'Forbidden' }); return; }
+    if (!user || user.role !== 'owner') { res.status(403).json({ error: 'Forbidden' }); return; }
     res.json(await getAllAds());
   });
 
   server.post('/api/admin/ads', upload.single('image'), async (req: Request, res: Response) => {
     const user = await getAuthUser(req);
-    if (!user || !isOwner(user.id)) { res.status(403).json({ error: 'Forbidden' }); return; }
+    if (!user || user.role !== 'owner') { res.status(403).json({ error: 'Forbidden' }); return; }
     
     if (!req.file) { res.status(400).json({ error: 'Image is required.' }); return; }
     const { linkUrl, placement, label } = req.body;
@@ -610,7 +656,7 @@ app.prepare().then(() => {
 
   server.post('/api/admin/ads/:id/toggle', async (req: Request, res: Response) => {
     const user = await getAuthUser(req);
-    if (!user || !isOwner(user.id)) { res.status(403).json({ error: 'Forbidden' }); return; }
+    if (!user || user.role !== 'owner') { res.status(403).json({ error: 'Forbidden' }); return; }
     const updated = await toggleAd(req.params.id as string);
     if (!updated) { res.status(404).json({ error: 'Ad not found' }); return; }
     res.json(updated);
@@ -618,7 +664,7 @@ app.prepare().then(() => {
 
   server.delete('/api/admin/ads/:id', async (req: Request, res: Response) => {
     const user = await getAuthUser(req);
-    if (!user || !isOwner(user.id)) { res.status(403).json({ error: 'Forbidden' }); return; }
+    if (!user || user.role !== 'owner') { res.status(403).json({ error: 'Forbidden' }); return; }
     const success = await deleteAd(req.params.id as string);
     if (!success) { res.status(404).json({ error: 'Ad not found' }); return; }
     res.json({ success: true });
@@ -632,7 +678,7 @@ app.prepare().then(() => {
 
   server.post('/api/admin/notifications', async (req: Request, res: Response) => {
     const user = await getAuthUser(req);
-    if (!user || (!isOwner(user.id) && !isAdmin(user.id))) {
+    if (!user || (user.role !== 'owner' && user.role !== 'moderator')) {
       res.status(403).json({ error: 'Forbidden' });
       return;
     }
@@ -647,7 +693,7 @@ app.prepare().then(() => {
 
   server.delete('/api/admin/notifications/:id', async (req: Request, res: Response) => {
     const user = await getAuthUser(req);
-    if (!user || (!isOwner(user.id) && !isAdmin(user.id))) {
+    if (!user || (user.role !== 'owner' && user.role !== 'moderator')) {
       res.status(403).json({ error: 'Forbidden' });
       return;
     }

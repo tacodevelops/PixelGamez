@@ -17,6 +17,8 @@ export interface Game {
   discordUrl?: string;
   originalUrl?: string;
   developerLink?: string;
+  developerName?: string;
+  steamUrl?: string;
 }
 
 export interface Submission {
@@ -34,6 +36,8 @@ export interface Submission {
   discordUrl?: string;
   originalUrl?: string;
   developerLink?: string;
+  developerName?: string;
+  steamUrl?: string;
 }
 
 export const categories: Category[] = [

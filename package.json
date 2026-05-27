@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "ts-node --project tsconfig.server.json server.ts",
-    "build": "next build && tsc --project tsconfig.server.json",
+    "build": "npx prisma generate && next build && tsc --project tsconfig.server.json",
     "start": "NODE_ENV=production node dist/server.js"
   },
   "dependencies": {
@@ -19,9 +19,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "resend": "^4.0.0",
-    "strip-comments": "^2.0.1"
-  },
-  "devDependencies": {
+    "strip-comments": "^2.0.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
