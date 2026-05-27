@@ -143,5 +143,41 @@ Every user has a personalized public profile. They can:
 
 ---
 
+## 10. Game Embeds & Hotlink Bypassing
+
+Hosting games via iframes can occasionally present cross-origin and hotlinking challenges. 
+
+### Hotlink Protection Bypass
+Many portals (like itch.io) restrict their direct HTML5 game files (`html-classic.itch.zone`) from being embedded on external websites to save bandwidth. PixelGamez circumvents this by passing `referrerPolicy="no-referrer"` to the game `<iframe>`. By stripping the origin headers, the host assumes the game is being played directly and allows the connection.
+
+### Zoom Controls & Black Borders
+Because we bypass official embed widgets, some Unity WebGL games will load in a fixed-size canvas inside the responsive iframe, resulting in large black borders. To fix this, PixelGamez includes **Manual Zoom Controls** (`+` and `-`) next to the Fullscreen button. These controls use CSS `transform: scale()` to visually enlarge the iframe, cropping out the black borders so the game perfectly fits the monitor.
+
+---
+
+## 11. Troubleshooting & Database Issues
+
+If your server crashes or throws database errors on startup, it is almost always related to your `.env` configuration or Prisma state.
+
+### Error: "the provided database credentials for 'postgres' are not valid"
+If you are certain your Supabase password is correct, this error occurs because your password contains **special characters** (like `@`, `#`, `!`, `?`). Since `DATABASE_URL` is parsed as a literal web URL, special characters break the parsing logic.
+**The Fix:** You must URL-encode the special characters in your `.env` file.
+* `#` becomes `%23`
+* `@` becomes `%40`
+* `$` becomes `%24`
+* `!` becomes `%21`
+* `?` becomes `%3F`
+*(Example: `MyP@ssw#rd!` must be written as `MyP%40ssw%23rd%21`)*
+
+### Error: "The table 'public.Ad' does not exist in the current database"
+This error occurs when the tables defined in your `prisma/schema.prisma` file do not actually exist in your Supabase PostgreSQL database yet (or you recently pulled new code with new tables).
+**The Fix:** Sync your database schema by running this command in your terminal:
+```bash
+npx prisma db push
+```
+This command safely pushes your Prisma schema to Supabase and automatically creates any missing tables or columns.
+
+---
+
 ### Conclusion
 You are fully equipped to run and manage PixelGamez. Leverage the robust Postgres backend, monitor your custom ad CTRs or plug in your AdSense, keep an eye on user analytics, and build an incredible gaming community!

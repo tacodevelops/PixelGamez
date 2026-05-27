@@ -18,6 +18,7 @@ export default function GamePlayer({ game }: GamePlayerProps) {
   const [userVote, setUserVote] = useState<'like' | 'dislike' | null>(null);
   const [isVoting, setIsVoting] = useState(false);
   const [isFaving, setIsFaving] = useState(false);
+  const [zoom, setZoom] = useState(1);
 
   const isFavorited = user?.favoriteGames?.includes(game.id) ?? false;
 
@@ -109,7 +110,7 @@ export default function GamePlayer({ game }: GamePlayerProps) {
 
   return (
     <div className="game-player animate-scale-in">
-      <div className="game-player__embed-wrapper">
+      <div className="game-player__embed-wrapper" style={{ overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <iframe
           id="game-iframe"
           className="game-player__iframe"
@@ -117,6 +118,8 @@ export default function GamePlayer({ game }: GamePlayerProps) {
           frameBorder="0"
           scrolling="no"
           allowFullScreen
+          referrerPolicy="no-referrer"
+          style={{ transform: `scale(${zoom})`, transformOrigin: 'center center', transition: 'transform 0.2s', width: '100%', height: '100%' }}
         ></iframe>
       </div>
 
@@ -163,6 +166,15 @@ export default function GamePlayer({ game }: GamePlayerProps) {
               )}
             </span> {isFavorited ? 'Favorited' : 'Favorite'}
           </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', marginRight: '8px' }}>
+            <button className="game-player__btn game-player__btn--zoom" onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} title="Zoom Out" style={{ padding: '8px' }}>
+              <span className="icon">➖</span>
+            </button>
+            <span style={{ fontSize: '0.9rem', opacity: 0.8, minWidth: '40px', textAlign: 'center' }}>{Math.round(zoom * 100)}%</span>
+            <button className="game-player__btn game-player__btn--zoom" onClick={() => setZoom(z => Math.min(3, z + 0.1))} title="Zoom In" style={{ padding: '8px' }}>
+              <span className="icon">➕</span>
+            </button>
+          </div>
           <button className="game-player__btn game-player__btn--fullscreen" onClick={handleFullscreen}>
             <span className="icon">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
@@ -177,7 +189,7 @@ export default function GamePlayer({ game }: GamePlayerProps) {
         <h3>{t('about') || 'About'} {game.title}</h3>
         <p>{game.description}</p>
         
-        {(game.discordUrl || game.steamUrl) && (
+        {(game.discordUrl || game.steamUrl || game.developerLink) && (
           <div className="game-player__links" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
             {game.discordUrl && (
               <a href={game.discordUrl} target="_blank" rel="noopener noreferrer" className="game-player__btn" style={{ textDecoration: 'none' }}>
@@ -187,6 +199,11 @@ export default function GamePlayer({ game }: GamePlayerProps) {
             {game.steamUrl && (
               <a href={game.steamUrl} target="_blank" rel="noopener noreferrer" className="game-player__btn" style={{ textDecoration: 'none' }}>
                 <span className="icon">🎮</span> Steam
+              </a>
+            )}
+            {game.developerLink && (
+              <a href={game.developerLink} target="_blank" rel="noopener noreferrer" className="game-player__btn" style={{ textDecoration: 'none', backgroundColor: '#6D28D9', color: '#fff' }}>
+                <span className="icon">💖</span> Support Creator
               </a>
             )}
           </div>
