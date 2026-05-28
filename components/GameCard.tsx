@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
+import React from 'react';
 import { Game } from '../lib/data';
 import { useI18n } from './I18nContext';
 
@@ -8,12 +10,12 @@ interface GameCardProps {
   game: Game;
 }
 
-export default function GameCard({ game }: GameCardProps) {
+const GameCard = React.memo(function GameCard({ game }: GameCardProps) {
   const { t } = useI18n();
 
   return (
     <Link href={`/game/${game.id}`} className="game-card">
-      <img src={game.thumbnail} alt="" className="game-card__image" loading="lazy" />
+      <Image src={game.thumbnail} alt="" className="game-card__image" fill sizes="(max-width: 768px) 50vw, 25vw" loading="lazy" style={{ objectFit: 'cover' }} />
       <div className="game-card__overlay">
         <span className="game-card__title">
           {(() => {
@@ -33,4 +35,6 @@ export default function GameCard({ game }: GameCardProps) {
       )}
     </Link>
   );
-}
+});
+
+export default GameCard;

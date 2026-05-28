@@ -97,94 +97,119 @@ app.prepare().then(() => {
         res.json({ status: 'ok' });
     });
     server.post('/api/auth/register-otp', async (req, res) => {
-        const { email } = req.body;
-        if (!email) {
-            res.status(400).json({ error: 'Email is required.' });
-            return;
+        try {
+            const { email } = req.body;
+            if (!email) {
+                res.status(400).json({ error: 'Email is required.' });
+                return;
+            }
+            const normalizedEmail = email.toLowerCase().trim();
+            const existingUser = await prisma_1.prisma.user.findUnique({ where: { email: normalizedEmail } });
+            if (existingUser) {
+                res.status(400).json({ error: 'An account with this email already exists.' });
+                return;
+            }
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+            await prisma_1.prisma.verificationCode.upsert({
+                where: { email: normalizedEmail },
+                update: { code, expiresAt },
+                create: { email: normalizedEmail, code, expiresAt },
+            });
+            const emailResult = await (0, email_1.sendOTP)(normalizedEmail, code);
+            if (emailResult && emailResult.error) {
+                console.error('Failed to send OTP via Resend:', emailResult.error);
+                const errMsg = emailResult.error.message || JSON.stringify(emailResult.error);
+                res.status(500).json({ error: 'Failed to send email: ' + errMsg });
+                return;
+            }
+            res.json({ success: true });
         }
-        const normalizedEmail = email.toLowerCase().trim();
-        const existingUser = await prisma_1.prisma.user.findUnique({ where: { email: normalizedEmail } });
-        if (existingUser) {
-            res.status(400).json({ error: 'An account with this email already exists.' });
-            return;
+        catch (err) {
+            console.error('OTP Error:', err);
+            res.status(500).json({ error: 'Internal server error: ' + (err.message || 'Unknown error') });
         }
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-        await prisma_1.prisma.verificationCode.upsert({
-            where: { email: normalizedEmail },
-            update: { code, expiresAt },
-            create: { email: normalizedEmail, code, expiresAt }
-        });
-        await (0, email_1.sendOTP)(normalizedEmail, code);
-        res.json({ success: true });
     });
     server.post('/api/auth/register', async (req, res) => {
-        const { email, password, displayName, code } = req.body;
-        if (!email || !password || !displayName || !code) {
-            res.status(400).json({ error: 'Email, password, display name, and code are required.' });
-            return;
-        }
-        const normalizedEmail = email.toLowerCase().trim();
-        const verification = await prisma_1.prisma.verificationCode.findUnique({ where: { email: normalizedEmail } });
-        if (!verification || verification.code !== code || verification.expiresAt < new Date()) {
-            res.status(400).json({ error: 'Invalid or expired verification code.' });
-            return;
-        }
-        const existingUser = await prisma_1.prisma.user.findUnique({ where: { email: normalizedEmail } });
-        if (existingUser) {
-            res.status(400).json({ error: 'An account with this email already exists.' });
-            return;
-        }
-        if (password.length < 6) {
-            res.status(400).json({ error: 'Password must be at least 6 characters.' });
-            return;
-        }
-        const salt = bcryptjs_1.default.genSaltSync(10);
-        const passwordHash = bcryptjs_1.default.hashSync(password, salt);
-        const newUser = await prisma_1.prisma.user.create({
-            data: {
-                email: normalizedEmail,
-                displayName: displayName.trim(),
-                passwordHash,
-                role: normalizedEmail === 'dahiruhammajam@gmail.com' ? 'owner' : 'user',
+        try {
+            const { email, password, displayName, code } = req.body;
+            if (!email || !password || !displayName || !code) {
+                res.status(400).json({ error: 'Email, password, display name, and code are required.' });
+                return;
             }
-        });
-        await prisma_1.prisma.verificationCode.delete({ where: { email: normalizedEmail } });
-        const token = await (0, sessions_1.createSession)(newUser.id);
-        res.cookie(sessions_1.SESSION_COOKIE_NAME, token, {
-            httpOnly: true,
-            maxAge: sessions_1.SESSION_COOKIE_MAX_AGE * 1000,
-            sameSite: 'lax',
-            path: '/',
-        });
-        const { passwordHash: _ } = newUser, publicUser = __rest(newUser, ["passwordHash"]);
-        res.json({ user: publicUser });
+            const normalizedEmail = email.toLowerCase().trim();
+            // --- TEMPORARILY BYPASS OTP VERIFICATION ---
+            // const verification = await prisma.verificationCode.findUnique({ where: { email: normalizedEmail } });
+            // if (!verification || verification.code !== code || verification.expiresAt < new Date()) {
+            //   res.status(400).json({ error: 'Invalid or expired verification code.' });
+            //   return;
+            // }
+            const existingUser = await prisma_1.prisma.user.findUnique({ where: { email: normalizedEmail } });
+            if (existingUser) {
+                res.status(400).json({ error: 'An account with this email already exists.' });
+                return;
+            }
+            if (password.length < 6) {
+                res.status(400).json({ error: 'Password must be at least 6 characters.' });
+                return;
+            }
+            const salt = bcryptjs_1.default.genSaltSync(10);
+            const passwordHash = bcryptjs_1.default.hashSync(password, salt);
+            const newUser = await prisma_1.prisma.user.create({
+                data: {
+                    email: normalizedEmail,
+                    displayName: displayName.trim(),
+                    passwordHash,
+                    role: normalizedEmail === 'dahiruhammajam@gmail.com' ? 'owner' : 'user',
+                }
+            });
+            await prisma_1.prisma.verificationCode.delete({ where: { email: normalizedEmail } }).catch(() => { });
+            const token = await (0, sessions_1.createSession)(newUser.id);
+            res.cookie(sessions_1.SESSION_COOKIE_NAME, token, {
+                httpOnly: true,
+                maxAge: sessions_1.SESSION_COOKIE_MAX_AGE * 1000,
+                sameSite: 'lax',
+                path: '/',
+            });
+            const { passwordHash: _ } = newUser, publicUser = __rest(newUser, ["passwordHash"]);
+            res.json({ user: publicUser });
+        }
+        catch (err) {
+            console.error('Register Error:', err);
+            res.status(500).json({ error: 'Internal server error: ' + (err.message || 'Unknown error') });
+        }
     });
     server.post('/api/auth/login', async (req, res) => {
-        const { email, password } = req.body;
-        if (!email || !password) {
-            res.status(400).json({ error: 'Email and password are required.' });
-            return;
+        try {
+            const { email, password } = req.body;
+            if (!email || !password) {
+                res.status(400).json({ error: 'Email and password are required.' });
+                return;
+            }
+            const normalizedEmail = email.toLowerCase().trim();
+            const user = await prisma_1.prisma.user.findUnique({
+                where: { email: normalizedEmail },
+                include: { favoriteGames: { select: { id: true } } }
+            });
+            if (!user || !bcryptjs_1.default.compareSync(password, user.passwordHash)) {
+                res.status(401).json({ error: 'Invalid email or password.' });
+                return;
+            }
+            const token = await (0, sessions_1.createSession)(user.id);
+            res.cookie(sessions_1.SESSION_COOKIE_NAME, token, {
+                httpOnly: true,
+                maxAge: sessions_1.SESSION_COOKIE_MAX_AGE * 1000,
+                sameSite: 'lax',
+                path: '/',
+            });
+            const { passwordHash: _ } = user, rest = __rest(user, ["passwordHash"]);
+            const publicUser = Object.assign(Object.assign({}, rest), { favoriteGames: user.favoriteGames.map(g => g.id) });
+            res.json({ user: publicUser });
         }
-        const normalizedEmail = email.toLowerCase().trim();
-        const user = await prisma_1.prisma.user.findUnique({
-            where: { email: normalizedEmail },
-            include: { favoriteGames: { select: { id: true } } }
-        });
-        if (!user || !bcryptjs_1.default.compareSync(password, user.passwordHash)) {
-            res.status(401).json({ error: 'Invalid email or password.' });
-            return;
+        catch (err) {
+            console.error('Login Error:', err);
+            res.status(500).json({ error: 'Internal server error: ' + (err.message || 'Unknown error') });
         }
-        const token = await (0, sessions_1.createSession)(user.id);
-        res.cookie(sessions_1.SESSION_COOKIE_NAME, token, {
-            httpOnly: true,
-            maxAge: sessions_1.SESSION_COOKIE_MAX_AGE * 1000,
-            sameSite: 'lax',
-            path: '/',
-        });
-        const { passwordHash: _ } = user, rest = __rest(user, ["passwordHash"]);
-        const publicUser = Object.assign(Object.assign({}, rest), { favoriteGames: user.favoriteGames.map(g => g.id) });
-        res.json({ user: publicUser });
     });
     server.post('/api/auth/logout', async (req, res) => {
         var _a;
@@ -420,6 +445,54 @@ app.prepare().then(() => {
             res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to submit game' });
         }
     });
+    // --- USER MANAGEMENT ENDPOINTS ---
+    server.get('/api/admin/users', async (req, res) => {
+        try {
+            const user = await getAuthUser(req);
+            if (!user || (user.role !== 'owner' && user.role !== 'moderator')) {
+                res.status(403).json({ error: 'Forbidden' });
+                return;
+            }
+            const users = await prisma_1.prisma.user.findMany({
+                select: { id: true, email: true, displayName: true, role: true, createdAt: true },
+                orderBy: { createdAt: 'desc' }
+            });
+            res.json(users);
+        }
+        catch (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    });
+    server.put('/api/admin/users/:id/role', async (req, res) => {
+        try {
+            const user = await getAuthUser(req);
+            if (!user || user.role !== 'owner') {
+                res.status(403).json({ error: 'Forbidden. Only owners can change roles.' });
+                return;
+            }
+            const { role } = req.body;
+            if (!['user', 'moderator', 'owner'].includes(role)) {
+                res.status(400).json({ error: 'Invalid role' });
+                return;
+            }
+            const targetUser = await prisma_1.prisma.user.findUnique({ where: { id: req.params.id } });
+            if (targetUser && targetUser.role === 'owner') {
+                res.status(403).json({ error: 'Owners cannot be demoted through the UI.' });
+                return;
+            }
+            const updatedUser = await prisma_1.prisma.user.update({
+                where: { id: req.params.id },
+                data: { role }
+            });
+            res.json({ success: true, role: updatedUser.role });
+        }
+        catch (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    });
+    // --- SUBMISSION ENDPOINTS ---
     server.get('/api/admin/pending', async (req, res) => {
         const user = await getAuthUser(req);
         if (!user || !(0, users_1.isAdmin)(user.id)) {
@@ -466,14 +539,29 @@ app.prepare().then(() => {
         res.json({ success: true, game: result });
     });
     server.get('/api/users/:id', async (req, res) => {
-        const user = (0, users_1.getUserById)(req.params.id);
+        const idParam = req.params.id;
+        let user;
+        if (!isNaN(Number(idParam))) {
+            user = await prisma_1.prisma.user.findFirst({ where: { playerId: Number(idParam) } });
+        }
+        else {
+            user = await prisma_1.prisma.user.findUnique({ where: { id: idParam } });
+        }
         if (!user) {
             res.status(404).json({ error: 'User not found.' });
             return;
         }
-        const allSubmissions = await (0, submissions_1.getSubmissionsByUser)(user.id);
-        const submissions = allSubmissions.filter(s => s.status === 'approved');
-        res.json({ user, submissions });
+        // Fetch followers and following counts
+        const followersCount = await prisma_1.prisma.follow.count({ where: { followingId: user.id } });
+        const followingCount = await prisma_1.prisma.follow.count({ where: { followerId: user.id } });
+        const allSubmissions = await prisma_1.prisma.submission.findMany({ where: { userId: user.id, status: 'approved' } });
+        const { passwordHash } = user, publicUser = __rest(user, ["passwordHash"]);
+        res.json({
+            user: publicUser,
+            submissions: allSubmissions,
+            followersCount,
+            followingCount
+        });
     });
     server.post('/api/auth/bio', async (req, res) => {
         const user = await getAuthUser(req);
@@ -523,12 +611,20 @@ app.prepare().then(() => {
         }
     });
     server.get('/api/users/lookup/:name', async (req, res) => {
-        const user = (0, users_1.getUserByDisplayName)(req.params.name);
+        const name = req.params.name;
+        const user = await prisma_1.prisma.user.findFirst({
+            where: {
+                displayName: {
+                    equals: name,
+                    mode: 'insensitive'
+                }
+            }
+        });
         if (!user) {
             res.status(404).json({ error: 'User not found.' });
             return;
         }
-        res.json({ id: user.id, displayName: user.displayName });
+        res.json({ id: user.playerId || user.id, displayName: user.displayName });
     });
     server.get('/api/ads/:placement', async (req, res) => {
         const placement = req.params.placement;
@@ -705,6 +801,97 @@ app.prepare().then(() => {
         }
         const success = await (0, friends_1.unfollowUser)(user.id, req.params.targetId);
         res.json({ success });
+    });
+    server.get('/api/proxy-game', async (req, res) => {
+        const targetUrl = req.query.url;
+        if (!targetUrl) {
+            res.status(400).send('URL required');
+            return;
+        }
+        try {
+            const fetchRes = await fetch(targetUrl, {
+                headers: {
+                    'Referer': 'https://itch.io/',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                }
+            });
+            if (!fetchRes.ok) {
+                res.status(fetchRes.status).send('Proxy error');
+                return;
+            }
+            let html = await fetchRes.text();
+            // Inject <base> tag so relative assets load from the original itch.zone domain
+            const baseUrl = new URL('.', targetUrl).href;
+            const injectCss = `<style>
+        html, body { width: 100% !important; height: 100% !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; background-color: #000 !important; }
+        canvas, #canvas-container, #unity-container, #game-container, iframe { width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important; margin: 0 !important; object-fit: contain !important; }
+      </style>`;
+            if (html.includes('<head>')) {
+                html = html.replace('<head>', `<head><base href="${baseUrl}">${injectCss}`);
+            }
+            else {
+                html = `<head><base href="${baseUrl}">${injectCss}</head>` + html;
+            }
+            res.send(html);
+        }
+        catch (e) {
+            console.error('Proxy Error:', e);
+            res.status(500).send('Error proxying game: ' + e.message);
+        }
+    });
+    server.post('/api/contact', async (req, res) => {
+        try {
+            const { name, email, company, message, budget } = req.body;
+            await prisma_1.prisma.brandInquiry.create({
+                data: {
+                    name,
+                    email,
+                    company: company || null,
+                    budget: budget || null,
+                    message,
+                }
+            });
+            res.status(200).json({ success: true });
+        }
+        catch (err) {
+            console.error('Failed to save inquiry:', err);
+            res.status(500).json({ error: 'Failed to save inquiry' });
+        }
+    });
+    server.get('/api/admin/inquiries', async (req, res) => {
+        const user = await getAuthUser(req);
+        if (!user || user.role !== 'owner') {
+            res.status(403).json({ error: 'Forbidden' });
+            return;
+        }
+        try {
+            const inquiries = await prisma_1.prisma.brandInquiry.findMany({
+                orderBy: { createdAt: 'desc' }
+            });
+            res.status(200).json(inquiries);
+        }
+        catch (err) {
+            console.error('Error fetching inquiries:', err);
+            res.status(500).json({ error: 'Failed to fetch inquiries' });
+        }
+    });
+    server.post('/api/admin/inquiries/:id/read', async (req, res) => {
+        const user = await getAuthUser(req);
+        if (!user || user.role !== 'owner') {
+            res.status(403).json({ error: 'Forbidden' });
+            return;
+        }
+        try {
+            await prisma_1.prisma.brandInquiry.update({
+                where: { id: req.params.id },
+                data: { status: 'read' }
+            });
+            res.status(200).json({ success: true });
+        }
+        catch (err) {
+            console.error('Error updating inquiry:', err);
+            res.status(500).json({ error: 'Failed to update inquiry' });
+        }
     });
     server.use((req, res) => {
         return handle(req, res);

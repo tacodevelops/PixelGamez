@@ -18,9 +18,17 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
     notFound();
   }
 
-  const followersCount = await prisma.follow.count({ where: { followingId: dbUser.id } });
-  const followingCount = await prisma.follow.count({ where: { followerId: dbUser.id } });
+  const [followersCount, followingCount, allSubmissions] = await Promise.all([
+    prisma.follow.count({ where: { followingId: dbUser.id } }),
+    prisma.follow.count({ where: { followerId: dbUser.id } }),
+    getSubmissionsByUser(dbUser.id)
+  ]);
 
+  const submissions = allSubmissions.filter(s => s.status === 'approved').map(s => ({
+    ...s,
+    thumbnail: s.thumbnail || '',
+    submittedAt: s.submittedAt.toISOString()
+  }));
   const user = {
     ...dbUser,
     createdAt: dbUser.createdAt.toISOString(),
@@ -29,13 +37,6 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
     followingCount
   };
   delete (user as any).passwordHash;
-
-  const allSubmissions = await getSubmissionsByUser(dbUser.id);
-  const submissions = allSubmissions.filter(s => s.status === 'approved').map(s => ({
-    ...s,
-    thumbnail: s.thumbnail || '',
-    submittedAt: s.submittedAt.toISOString()
-  }));
 
   return (
     <div className="animate-fade-in">

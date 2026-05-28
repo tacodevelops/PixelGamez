@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState, FormEvent, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { searchGames, Game } from '../lib/data';
@@ -106,7 +107,7 @@ export default function Header() {
     <header className="header">
       <div className="header__left">
         <Link href="/" className="header__logo">
-          <img src="/images/logo.png" alt="PixelGamez Logo" className="header__logo-icon" />
+          <Image src="/images/logo.png" alt="PixelGamez Logo" width={32} height={32} className="header__logo-icon" priority />
           <span className="header__logo-text">PixelGamez</span>
         </Link>
       </div>
@@ -136,7 +137,7 @@ export default function Header() {
               <>
                 {results.map(game => (
                   <Link key={game.id} href={`/game/${game.id}`} className="search-dropdown__item" onClick={handleResultClick}>
-                    <img src={game.thumbnail} alt={game.title} className="search-dropdown__thumb" />
+                    <Image src={game.thumbnail} alt={game.title} width={60} height={45} className="search-dropdown__thumb" style={{ objectFit: 'cover' }} />
                     <div className="search-dropdown__info">
                       <div className="search-dropdown__title">{game.title}</div>
                       <div className="search-dropdown__category">{game.category === 'io' ? '.io' : game.category}</div>
@@ -199,7 +200,7 @@ export default function Header() {
             <div className="header__user" ref={userMenuRef}>
               <button className="header__avatar" onClick={() => { setIsUserMenuOpen(!isUserMenuOpen); setIsEditingProfile(false); }} aria-label="User menu">
                 {user.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.displayName} className="header__avatar-img" />
+                  <Image src={user.avatarUrl} alt={user.displayName} width={32} height={32} className="header__avatar-img" style={{ objectFit: 'cover' }} unoptimized />
                 ) : (
                   user.displayName.charAt(0).toUpperCase()
                 )}
@@ -211,7 +212,7 @@ export default function Header() {
                     <div className="header__user-info">
                       <div className="header__user-avatar-row">
                         {user.avatarUrl ? (
-                          <img src={user.avatarUrl} alt="" className="header__user-avatar-large" />
+                          <Image src={user.avatarUrl} alt="" width={64} height={64} className="header__user-avatar-large" style={{ objectFit: 'cover' }} unoptimized />
                         ) : (
                           <div className="header__user-avatar-placeholder">{user.displayName.charAt(0).toUpperCase()}</div>
                         )}
@@ -258,7 +259,7 @@ export default function Header() {
                     <div className="header__profile-avatar-section">
                       <div className="header__profile-avatar-wrapper" onClick={() => avatarInputRef.current?.click()}>
                         {user.avatarUrl ? (
-                          <img src={user.avatarUrl} alt="" className="header__profile-avatar-img" />
+                          <Image src={user.avatarUrl} alt="" width={80} height={80} className="header__profile-avatar-img" style={{ objectFit: 'cover' }} unoptimized />
                         ) : (
                           <div className="header__profile-avatar-default">{user.displayName.charAt(0).toUpperCase()}</div>
                         )}

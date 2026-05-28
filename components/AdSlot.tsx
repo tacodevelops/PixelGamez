@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import React from 'react';
 
 interface Ad {
   id: string;
@@ -15,7 +17,7 @@ interface AdSlotProps {
   placement: 'sidebar' | 'banner-home' | 'game-below' | 'game-side' | 'profile';
 }
 
-export default function AdSlot({ placement }: AdSlotProps) {
+const AdSlot = React.memo(function AdSlot({ placement }: AdSlotProps) {
   const [ad, setAd] = useState<Ad | null>(null);
   const adSenseClientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
   const isAdSense = !!adSenseClientId;
@@ -83,8 +85,10 @@ export default function AdSlot({ placement }: AdSlotProps) {
     <div className={`ad-slot ad-slot--${placement}`}>
       <span className="ad-slot__badge">{ad.label || 'Ad'}</span>
       <Link href={ad.linkUrl} target="_blank" rel="noopener noreferrer" onClick={handleClick} className="ad-slot__link">
-        <img src={ad.imageUrl} alt="Advertisement" className="ad-slot__image" />
+        <Image src={ad.imageUrl} alt="Advertisement" className="ad-slot__image" fill sizes="(max-width: 768px) 100vw, 300px" style={{ objectFit: 'cover' }} />
       </Link>
     </div>
   );
-}
+});
+
+export default AdSlot;

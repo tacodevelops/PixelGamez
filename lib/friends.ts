@@ -27,19 +27,20 @@ export async function unfollowUser(followerId: string, followingId: string) {
 }
 
 export async function getFriendsAndFollows(userId: string) {
-  const followingRecords = await prisma.follow.findMany({
-    where: { followerId: userId },
-    include: {
-      following: { select: { id: true, displayName: true, avatarUrl: true } }
-    }
-  });
-
-  const followerRecords = await prisma.follow.findMany({
-    where: { followingId: userId },
-    include: {
-      follower: { select: { id: true, displayName: true, avatarUrl: true } }
-    }
-  });
+  const [followingRecords, followerRecords] = await Promise.all([
+    prisma.follow.findMany({
+      where: { followerId: userId },
+      include: {
+        following: { select: { id: true, displayName: true, avatarUrl: true } }
+      }
+    }),
+    prisma.follow.findMany({
+      where: { followingId: userId },
+      include: {
+        follower: { select: { id: true, displayName: true, avatarUrl: true } }
+      }
+    })
+  ]);
 
   const following = followingRecords.map(f => f.following);
   const followers = followerRecords.map(f => f.follower);
@@ -56,13 +57,14 @@ export async function getFriendsAndFollows(userId: string) {
 export async function getFriendshipStatus(userId: string, targetId: string) {
   if (userId === targetId) return 'self';
   
-  const iFollowThem = await prisma.follow.findFirst({
-    where: { followerId: userId, followingId: targetId }
-  });
-
-  const theyFollowMe = await prisma.follow.findFirst({
-    where: { followerId: targetId, followingId: userId }
-  });
+  const [iFollowThem, theyFollowMe] = await Promise.all([
+    prisma.follow.findFirst({
+      where: { followerId: userId, followingId: targetId }
+    }),
+    prisma.follow.findFirst({
+      where: { followerId: targetId, followingId: userId }
+    })
+  ]);
 
   if (iFollowThem && theyFollowMe) return 'friends';
   if (iFollowThem) return 'following';

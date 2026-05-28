@@ -6,6 +6,7 @@ import BioText from './BioText';
 import AdSlot from './AdSlot';
 import { useAuth } from './AuthContext';
 import { useI18n } from './I18nContext';
+import Image from 'next/image';
 import { games as allGames } from '../lib/data';
 
 interface ProfileUser {
@@ -198,7 +199,7 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
         <div className="profile-banner__content">
           <div className="profile-avatar-wrapper" onClick={() => isOwnProfile && avatarInputRef.current?.click()}>
             {displayUser.avatarUrl ? (
-              <img src={displayUser.avatarUrl} alt={displayUser.displayName} className="profile-avatar__img" />
+              <Image src={displayUser.avatarUrl} alt={displayUser.displayName} className="profile-avatar__img" width={128} height={128} style={{ objectFit: 'cover' }} unoptimized />
             ) : (
               <div className="profile-avatar__placeholder">
                 {displayUser.displayName.charAt(0).toUpperCase()}
@@ -386,7 +387,7 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
                     {submissions.map(game => (
                       <div key={game.id} className="game-card">
                         <div className="game-card__thumb">
-                          <img src={game.thumbnail || '/images/placeholder.jpg'} alt={game.title} />
+                          <Image src={game.thumbnail || '/images/placeholder.jpg'} alt={game.title} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit: 'cover' }} />
                           <div className="game-card__overlay">
                             <button className="game-card__btn" onClick={() => window.location.href = `/game/${game.id}`}>Play</button>
                           </div>
@@ -444,7 +445,7 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
                       {friendsData.friends.map((friend: any) => (
                         <div key={friend.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => window.location.href = `/user/${friend.playerId || friend.id}`}>
-                            {friend.avatarUrl ? <img src={friend.avatarUrl} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%' }} /> : <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-primary)', color: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{friend.displayName.charAt(0)}</div>}
+                            {friend.avatarUrl ? <Image src={friend.avatarUrl} alt="" width={40} height={40} style={{ borderRadius: '50%', objectFit: 'cover' }} unoptimized /> : <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-primary)', color: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{friend.displayName.charAt(0)}</div>}
                             <span style={{ fontWeight: 'bold', color: '#10b981' }}>{friend.displayName} ✓</span>
                           </div>
                           <button onClick={async () => {
@@ -467,7 +468,7 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
                         {friendsData.followers?.filter((f: any) => !friendsData.friends.find((fr: any) => fr.id === f.id)).map((follower: any) => (
                           <div key={follower.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => window.location.href = `/user/${follower.playerId || follower.id}`}>
-                              {follower.avatarUrl ? <img src={follower.avatarUrl} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%' }} /> : <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-primary)', color: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{follower.displayName.charAt(0)}</div>}
+                              {follower.avatarUrl ? <Image src={follower.avatarUrl} alt="" width={40} height={40} style={{ borderRadius: '50%', objectFit: 'cover' }} unoptimized /> : <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-primary)', color: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{follower.displayName.charAt(0)}</div>}
                               <span style={{ fontWeight: 'bold' }}>{follower.displayName}</span>
                             </div>
                             <button onClick={async () => {
@@ -488,7 +489,7 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
                         {friendsData.following?.filter((f: any) => !friendsData.friends.find((fr: any) => fr.id === f.id)).map((following: any) => (
                           <div key={following.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => window.location.href = `/user/${following.playerId || following.id}`}>
-                              {following.avatarUrl ? <img src={following.avatarUrl} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%' }} /> : <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-primary)', color: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{following.displayName.charAt(0)}</div>}
+                              {following.avatarUrl ? <Image src={following.avatarUrl} alt="" width={40} height={40} style={{ borderRadius: '50%', objectFit: 'cover' }} unoptimized /> : <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-primary)', color: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{following.displayName.charAt(0)}</div>}
                               <span style={{ fontWeight: 'bold' }}>{following.displayName}</span>
                             </div>
                              <button onClick={async () => {

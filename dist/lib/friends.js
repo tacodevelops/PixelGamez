@@ -28,18 +28,20 @@ async function unfollowUser(followerId, followingId) {
     return false;
 }
 async function getFriendsAndFollows(userId) {
-    const followingRecords = await prisma_1.prisma.follow.findMany({
-        where: { followerId: userId },
-        include: {
-            following: { select: { id: true, displayName: true, avatarUrl: true } }
-        }
-    });
-    const followerRecords = await prisma_1.prisma.follow.findMany({
-        where: { followingId: userId },
-        include: {
-            follower: { select: { id: true, displayName: true, avatarUrl: true } }
-        }
-    });
+    const [followingRecords, followerRecords] = await Promise.all([
+        prisma_1.prisma.follow.findMany({
+            where: { followerId: userId },
+            include: {
+                following: { select: { id: true, displayName: true, avatarUrl: true } }
+            }
+        }),
+        prisma_1.prisma.follow.findMany({
+            where: { followingId: userId },
+            include: {
+                follower: { select: { id: true, displayName: true, avatarUrl: true } }
+            }
+        })
+    ]);
     const following = followingRecords.map(f => f.following);
     const followers = followerRecords.map(f => f.follower);
     // Friends are those who are in both following and followers
@@ -52,12 +54,14 @@ async function getFriendsAndFollows(userId) {
 async function getFriendshipStatus(userId, targetId) {
     if (userId === targetId)
         return 'self';
-    const iFollowThem = await prisma_1.prisma.follow.findFirst({
-        where: { followerId: userId, followingId: targetId }
-    });
-    const theyFollowMe = await prisma_1.prisma.follow.findFirst({
-        where: { followerId: targetId, followingId: userId }
-    });
+    const [iFollowThem, theyFollowMe] = await Promise.all([
+        prisma_1.prisma.follow.findFirst({
+            where: { followerId: userId, followingId: targetId }
+        }),
+        prisma_1.prisma.follow.findFirst({
+            where: { followerId: targetId, followingId: userId }
+        })
+    ]);
     if (iFollowThem && theyFollowMe)
         return 'friends';
     if (iFollowThem)
