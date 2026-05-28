@@ -7,8 +7,10 @@ import { games } from '../../../lib/data';
 export default async function UserPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   
+  // Look up by playerId (convert to Int) or UUID if we want backwards compatibility
+  const playerId = parseInt(id);
   const dbUser = await prisma.user.findUnique({
-    where: { id },
+    where: isNaN(playerId) ? { id } : { playerId },
     include: { favoriteGames: { select: { id: true } } }
   });
 
@@ -23,7 +25,7 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
   };
   delete (user as any).passwordHash;
 
-  const allSubmissions = await getSubmissionsByUser(id);
+  const allSubmissions = await getSubmissionsByUser(dbUser.id);
   const submissions = allSubmissions.filter(s => s.status === 'approved').map(s => ({
     ...s,
     thumbnail: s.thumbnail || '',

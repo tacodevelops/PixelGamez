@@ -224,7 +224,7 @@ export default function Header() {
                       </div>
                     </div>
                     <div className="header__user-divider"></div>
-                    <Link href={`/user/${user.id}`} className="header__user-link" onClick={() => setIsUserMenuOpen(false)}>
+                    <Link href={`/user/${(user as any).playerId || user.id}`} className="header__user-link" onClick={() => setIsUserMenuOpen(false)}>
                       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                       {t('profile')}
                     </Link>

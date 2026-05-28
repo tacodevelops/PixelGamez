@@ -1,58 +1,66 @@
 import re
-from deep_translator import GoogleTranslator
+from deep_translator import GoogleTranslator  # pyrefly: ignore [missing-import]
 
-keys_to_translate = {
-    'about': "About", 'fullscreen': "Fullscreen", 'owner_panel': "Owner Panel", 'moderator_panel': "Moderator Panel",
-    'action': "Action", 'adventure': "Adventure", 'arcade': "Arcade", 'board': "Board", 'card': "Card",
-    'clicker': "Clicker", 'driving': "Driving", 'io': ".io", 'puzzle': "Puzzle", 'shooting': "Shooting",
-    'simulation': "Simulation", 'sports': "Sports", 'strategy': "Strategy", 'featured': "Featured",
-    'multiplayer': "Multiplayer", 'singleplayer': "Singleplayer", 'retro': "Retro", 'html5': "HTML5"
-}
+keys_to_translate = {}
 
-with open('c:/Users/dahir/Documents/pixelgamez/lib/translations.ts', 'r', encoding='utf-8') as f:
-    content = f.read()
+# Auto-extract games from data.ts to translate their titles and descriptions
+with open('c:/Users/dahir/Documents/pixelgamez/lib/data.ts', 'r', encoding='utf-8') as f:
+    data_content = f.read()
 
-def translate_text(text, lang_code):
-    if lang_code == 'en': return text
-    if lang_code == 'zh': lang_code = 'zh-CN'
-    try:
-        return GoogleTranslator(source='en', target=lang_code).translate(text)
-    except Exception as e:
-        print(f"Error translating {text} to {lang_code}: {e}")
-        return text
+game_blocks = re.findall(r"\{\s*id:\s*['\"]([^'\"]+)['\"],\s*title:\s*['\"]([^'\"]+)['\"],\s*description:\s*['\"]([^'\"]+)['\"]", data_content)
+for game_id, title, desc in game_blocks:
+    keys_to_translate[f"game_{game_id}_title"] = title
+    keys_to_translate[f"game_{game_id}_desc"] = desc
 
-def process_match(m):
-    lang_code = m.group(1)
-    body = m.group(2)
+def process_translation():
+    import sys
+    import time
     
-    # Let's remove the keys_to_translate if they already exist so we can re-add them translated
-    for k in keys_to_translate:
-        # regex to remove `k: "...",` or `k: "..."`
-        # watch out for trailing commas
-        body = re.sub(r'\b' + k + r'\s*:\s*"[^"]*",?', '', body)
-        body = re.sub(r'\b' + k + r"\s*:\s*'[^']*',?", '', body)
+    keys = list(keys_to_translate.keys())
+    english_texts = [keys_to_translate[k] for k in keys]
     
-    # clean up multiple commas or empty lines
-    body = re.sub(r',\s*,', ',', body)
+    with open('c:/Users/dahir/Documents/pixelgamez/lib/translations.ts', 'r', encoding='utf-8') as f:
+        file_content = f.read()
+
+    langs = ['ru', 'uk', 'es', 'pt', 'id', 'tl', 'ko', 'ja', 'zh', 'fi', 'sv', 'no', 'da', 'de', 'pl', 'ro', 'it', 'fr', 'th', 'vi', 'ar', 'tr', 'hi', 'nl', 'el', 'ms', 'hu', 'cs']
     
-    print(f"Translating for {lang_code}...")
-    new_entries = []
-    for k in keys_to_translate:
-        english_text = keys_to_translate[k]
-        translated = translate_text(english_text, lang_code)
-        translated = translated.replace('"', '\\"')
-        new_entries.append(f'{k}: "{translated}"')
+    for lang in langs:
+        print(f"Translating for {lang}...", flush=True)
+        target_lang = 'zh-CN' if lang == 'zh' else lang
         
-    body_stripped = body.strip()
-    if body_stripped and not body_stripped.endswith(','):
-        body += ','
-    
-    body += '\n    ' + ', '.join(new_entries) + '\n  '
-    return f"{lang_code}: {{{body}}}"
+        # Check if already translated
+        pattern = r'\b' + lang + r':\s*\{([^}]+)\}'
+        match = re.search(pattern, file_content)
+        if not match: continue
+        
+        existing_body = match.group(1).rstrip()
+        if 'game_' in existing_body and existing_body.count('game_') > 100:
+            print(f"{lang} already has game translations, skipping.", flush=True)
+            continue
+            
+        new_entries = []
+        translator = GoogleTranslator(source='en', target=target_lang)
+        
+        for k in keys:
+            try:
+                translated = translator.translate(keys_to_translate[k])
+                translated_str = str(translated).replace('"', '\\"') if translated else keys_to_translate[k]
+                new_entries.append(f'{k}: "{translated_str}"')
+            except Exception as e:
+                new_entries.append(f'{k}: "{keys_to_translate[k]}"')
+            time.sleep(0.3)
+            
+        if not existing_body.endswith(','):
+            existing_body += ','
+            
+        new_body = existing_body + '\n    ' + ',\n    '.join(new_entries) + '\n  '
+        new_block = f"{lang}: {{{new_body}}}"
+        file_content = re.sub(pattern, new_block, file_content)
+        
+        with open('c:/Users/dahir/Documents/pixelgamez/lib/translations.ts', 'w', encoding='utf-8') as f:
+            f.write(file_content)
+        print(f"Saved {lang} successfully!", flush=True)
+        time.sleep(2)
 
-new_content = re.sub(r'([a-z]{2}(?:-[A-Z]{2})?):\s*\{([^}]+)\}', process_match, content)
-
-with open('c:/Users/dahir/Documents/pixelgamez/lib/translations.ts', 'w', encoding='utf-8') as f:
-    f.write(new_content)
-
-print("Done translating!")
+process_translation()
+print("Done translating everything!", flush=True)

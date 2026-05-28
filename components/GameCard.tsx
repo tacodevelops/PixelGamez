@@ -15,7 +15,12 @@ export default function GameCard({ game }: GameCardProps) {
     <Link href={`/game/${game.id}`} className="game-card">
       <img src={game.thumbnail} alt="" className="game-card__image" loading="lazy" />
       <div className="game-card__overlay">
-        <span className="game-card__title">{game.title}</span>
+        <span className="game-card__title">
+          {(() => {
+            const translated = t(`game_${game.id}_title`);
+            return translated === `game_${game.id}_title` ? game.title : translated;
+          })()}
+        </span>
       </div>
       {game.tags.length > 0 && (
         <div className="game-card__badges">

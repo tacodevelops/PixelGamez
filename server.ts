@@ -474,6 +474,49 @@ app.prepare().then(() => {
 
   
 
+  // --- USER MANAGEMENT ENDPOINTS ---
+  server.get('/api/admin/users', async (req: Request, res: Response) => {
+    try {
+      const user = await getAuthUser(req);
+      if (!user || (user.role !== 'owner' && user.role !== 'moderator')) {
+        res.status(403).json({ error: 'Forbidden' });
+        return;
+      }
+      const users = await prisma.user.findMany({
+        select: { id: true, email: true, displayName: true, role: true, createdAt: true },
+        orderBy: { createdAt: 'desc' }
+      });
+      res.json(users);
+    } catch (err: any) {
+      console.error(err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  server.put('/api/admin/users/:id/role', async (req: Request, res: Response) => {
+    try {
+      const user = await getAuthUser(req);
+      if (!user || user.role !== 'owner') {
+        res.status(403).json({ error: 'Forbidden. Only owners can change roles.' });
+        return;
+      }
+      const { role } = req.body;
+      if (!['user', 'moderator', 'owner'].includes(role)) {
+        res.status(400).json({ error: 'Invalid role' });
+        return;
+      }
+      const updatedUser = await prisma.user.update({
+        where: { id: req.params.id as string },
+        data: { role }
+      });
+      res.json({ success: true, role: updatedUser.role });
+    } catch (err: any) {
+      console.error(err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // --- SUBMISSION ENDPOINTS ---
   server.get('/api/admin/pending', async (req: Request, res: Response) => {
     const user = await getAuthUser(req);
     if (!user || !isAdmin(user.id)) {
@@ -579,9 +622,17 @@ app.prepare().then(() => {
   });
 
   server.get('/api/users/lookup/:name', async (req: Request, res: Response) => {
-    const user = getUserByDisplayName(req.params.name as string);
+    const name = req.params.name as string;
+    const user = await prisma.user.findFirst({
+      where: {
+        displayName: {
+          equals: name,
+          mode: 'insensitive'
+        }
+      }
+    });
     if (!user) { res.status(404).json({ error: 'User not found.' }); return; }
-    res.json({ id: user.id, displayName: user.displayName });
+    res.json({ id: user.playerId || user.id, displayName: user.displayName });
   });
 
   

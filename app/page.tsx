@@ -53,7 +53,7 @@ export default function Home() {
       )}
 
       {favoriteGames.length > 0 && (
-        <GameCarousel title="Your Favorites" games={favoriteGames.slice(0, 14)} viewMoreLink={`/user/${user?.id}`} />
+        <GameCarousel title="Your Favorites" games={favoriteGames.slice(0, 14)} viewMoreLink={`/user/${(user as any)?.playerId || user?.id}`} />
       )}
 
       <GameCarousel title={t('top_picks')} games={recommendedGames.slice(0, 14)} viewMoreLink="/recommended" />

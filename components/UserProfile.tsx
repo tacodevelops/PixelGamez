@@ -403,7 +403,7 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
                   <p className="profile-card__empty">No favorite games yet.</p>
                 ) : (
                   <div className="game-grid game-grid--profile">
-                    {displayUser.favoriteGames?.slice(0, 8).map(gameId => (
+                    {displayUser.favoriteGames?.map(gameId => (
                       <div key={gameId} className="game-card" onClick={() => window.location.href = `/game/${gameId}`} style={{ cursor: 'pointer' }}>
                         <div className="game-card__thumb">
                           <div style={{ width: '100%', height: '100%', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -433,7 +433,7 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       {friendsData.friends.map((friend: any) => (
                         <div key={friend.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => window.location.href = `/user/${friend.id}`}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => window.location.href = `/user/${friend.playerId || friend.id}`}>
                             {friend.avatarUrl ? <img src={friend.avatarUrl} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%' }} /> : <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{friend.displayName.charAt(0)}</div>}
                             <span style={{ fontWeight: 'bold', color: '#10b981' }}>{friend.displayName} ✓</span>
                           </div>
@@ -456,7 +456,7 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {friendsData.followers?.filter((f: any) => !friendsData.friends.find((fr: any) => fr.id === f.id)).map((follower: any) => (
                           <div key={follower.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => window.location.href = `/user/${follower.id}`}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => window.location.href = `/user/${follower.playerId || follower.id}`}>
                               {follower.avatarUrl ? <img src={follower.avatarUrl} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%' }} /> : <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{follower.displayName.charAt(0)}</div>}
                               <span style={{ fontWeight: 'bold' }}>{follower.displayName}</span>
                             </div>
@@ -477,7 +477,7 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {friendsData.following?.filter((f: any) => !friendsData.friends.find((fr: any) => fr.id === f.id)).map((following: any) => (
                           <div key={following.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => window.location.href = `/user/${following.id}`}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => window.location.href = `/user/${following.playerId || following.id}`}>
                               {following.avatarUrl ? <img src={following.avatarUrl} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%' }} /> : <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{following.displayName.charAt(0)}</div>}
                               <span style={{ fontWeight: 'bold' }}>{following.displayName}</span>
                             </div>

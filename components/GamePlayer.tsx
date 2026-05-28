@@ -125,7 +125,12 @@ export default function GamePlayer({ game }: GamePlayerProps) {
 
       <div className="game-player__controls">
         <div className="game-player__info">
-          <h1 className="game-player__title">{game.title}</h1>
+          <h1 className="game-player__title">
+            {(() => {
+              const translated = t(`game_${game.id}_title`);
+              return translated === `game_${game.id}_title` ? game.title : translated;
+            })()}
+          </h1>
           <div className="game-player__tags">
             {game.tags.map(tag => (
               <span key={tag} className={`game-player__tag game-player__tag--${tag}`}>{t(tag) || tag}</span>
@@ -186,8 +191,18 @@ export default function GamePlayer({ game }: GamePlayerProps) {
       </div>
 
       <div className="game-player__description-card">
-        <h3>{t('about') || 'About'} {game.title}</h3>
-        <p>{game.description}</p>
+        <h3>
+          {t('about') || 'About'} {(() => {
+            const translated = t(`game_${game.id}_title`);
+            return translated === `game_${game.id}_title` ? game.title : translated;
+          })()}
+        </h3>
+        <p>
+          {(() => {
+            const translated = t(`game_${game.id}_desc`);
+            return translated === `game_${game.id}_desc` ? game.description : translated;
+          })()}
+        </p>
         
         {(game.discordUrl || game.steamUrl || game.developerLink) && (
           <div className="game-player__links" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>

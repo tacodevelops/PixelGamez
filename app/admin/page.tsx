@@ -29,7 +29,7 @@ interface Ad {
 
 export default function AdminPage() {
   const { isLoggedIn, isOwner, isModerator, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<'submissions' | 'ads' | 'notices' | 'analytics'>('submissions');
+  const [activeTab, setActiveTab] = useState<'submissions' | 'ads' | 'notices' | 'analytics' | 'users'>('submissions');
   
   
   const [pending, setPending] = useState<Submission[]>([]);
@@ -55,12 +55,17 @@ export default function AdminPage() {
   const [fetchingAnalytics, setFetchingAnalytics] = useState(false);
   const [analyticsSearch, setAnalyticsSearch] = useState('');
 
+  // Users State
+  const [usersList, setUsersList] = useState<any[]>([]);
+  const [fetchingUsers, setFetchingUsers] = useState(false);
+
   useEffect(() => {
     if (!loading && (isOwner || isModerator)) {
       if (activeTab === 'submissions') fetchPending();
       if (activeTab === 'ads' && isOwner) fetchAds();
       if (activeTab === 'notices') fetchNotices();
       if (activeTab === 'analytics' && isOwner) fetchAnalytics();
+      if (activeTab === 'users' && (isOwner || isModerator)) fetchUsers();
     } else {
       setFetchingSubmissions(false);
       setFetchingAds(false);
@@ -82,6 +87,32 @@ export default function AdminPage() {
       const res = await fetch('/api/admin/analytics');
       if (res.ok) setAnalytics(await res.json());
     } catch {} finally { setFetchingAnalytics(false); }
+  }
+
+  async function fetchUsers() {
+    setFetchingUsers(true);
+    try {
+      const res = await fetch('/api/admin/users');
+      if (res.ok) setUsersList(await res.json());
+    } catch {} finally { setFetchingUsers(false); }
+  }
+
+  async function handleRoleChange(id: string, newRole: string) {
+    if (!confirm(`Are you sure you want to change this user's role to ${newRole}?`)) return;
+    try {
+      const res = await fetch(`/api/admin/users/${id}/role`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole })
+      });
+      if (res.ok) {
+        setUsersList(prev => prev.map(u => u.id === id ? { ...u, role: newRole } : u));
+      } else {
+        alert('Failed to change role');
+      }
+    } catch {
+      alert('Error changing role');
+    }
   }
 
   async function handleNoticeSubmit(e: React.FormEvent) {
@@ -219,6 +250,9 @@ export default function AdminPage() {
           </button>
           {isOwner && (
             <>
+              <button className={`admin-tab ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>
+                Users
+              </button>
               <button className={`admin-tab ${activeTab === 'ads' ? 'active' : ''}`} onClick={() => setActiveTab('ads')}>
                 Ad Management
               </button>
@@ -553,6 +587,52 @@ export default function AdminPage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {activeTab === 'users' && (
+        <div className="admin-section">
+          <p className="admin-section-desc">Manage user roles and permissions.</p>
+          {fetchingUsers ? (
+            <div className="admin-loading">Loading users...</div>
+          ) : usersList.length === 0 ? (
+            <div className="admin-empty">No users found.</div>
+          ) : (
+            <div className="admin-list" style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
+                    <th style={{ padding: 'var(--space-3)' }}>#</th>
+                    <th style={{ padding: 'var(--space-3)' }}>User</th>
+                    <th style={{ padding: 'var(--space-3)' }}>Email</th>
+                    <th style={{ padding: 'var(--space-3)' }}>Joined</th>
+                    <th style={{ padding: 'var(--space-3)' }}>Role</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {usersList.map(u => (
+                    <tr key={u.id} style={{ borderBottom: '1px solid var(--border-default)' }}>
+                      <td style={{ padding: 'var(--space-3)', color: 'var(--text-muted)' }}>{u.playerId}</td>
+                      <td style={{ padding: 'var(--space-3)' }}>{u.displayName}</td>
+                      <td style={{ padding: 'var(--space-3)', color: 'var(--text-secondary)' }}>{u.email}</td>
+                      <td style={{ padding: 'var(--space-3)', color: 'var(--text-muted)' }}>{new Date(u.createdAt).toLocaleDateString()}</td>
+                      <td style={{ padding: 'var(--space-3)' }}>
+                        <select 
+                          value={u.role}
+                          onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                          style={{ padding: '4px 8px', borderRadius: '4px', background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }}
+                        >
+                          <option value="user">User</option>
+                          <option value="moderator">Moderator</option>
+                          <option value="owner">Owner</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

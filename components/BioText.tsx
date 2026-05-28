@@ -25,7 +25,7 @@ export default function BioText({ text }: BioTextProps) {
         const res = await fetch(`/api/users/lookup/${username}`);
         if (res.ok) {
           const data = await res.json();
-          setResolvedMentions(prev => ({ ...prev, [username]: data.id }));
+          setResolvedMentions(prev => ({ ...prev, [username]: data.playerId || data.id }));
         } else {
           setResolvedMentions(prev => ({ ...prev, [username]: null }));
         }
