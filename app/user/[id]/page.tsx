@@ -18,10 +18,15 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
     notFound();
   }
 
+  const followersCount = await prisma.follow.count({ where: { followingId: dbUser.id } });
+  const followingCount = await prisma.follow.count({ where: { followerId: dbUser.id } });
+
   const user = {
     ...dbUser,
     createdAt: dbUser.createdAt.toISOString(),
-    favoriteGames: dbUser.favoriteGames.map(g => g.id)
+    favoriteGames: dbUser.favoriteGames.map(g => g.id),
+    followersCount,
+    followingCount
   };
   delete (user as any).passwordHash;
 

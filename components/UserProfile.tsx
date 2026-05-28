@@ -235,44 +235,46 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
                   {displayUser.country}
                 </span>
               )}
+              <span className="profile-banner__meta-item" style={{ marginLeft: '12px' }}>
+                <strong style={{ color: 'white', marginRight: '4px' }}>{displayUser.followersCount || 0}</strong> Followers
+              </span>
+              <span className="profile-banner__meta-item">
+                <strong style={{ color: 'white', marginRight: '4px' }}>{displayUser.followingCount || 0}</strong> Following
+              </span>
             </div>
             
             {/* Friend Actions */}
             {!isOwnProfile && (
-              <div style={{ marginTop: '16px' }}>
+              <div style={{ marginTop: '16px', display: 'flex', gap: '12px' }}>
                 {friendStatus === 'none' && (
-                  <button className="game-card__btn" style={{ background: 'var(--accent-primary)', color: 'white', padding: '8px 16px', borderRadius: 'var(--radius-sm)' }} onClick={() => handleFriendAction('follow')}>
+                  <button style={{ background: 'var(--accent-primary)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => handleFriendAction('follow')}>
                     Follow
                   </button>
                 )}
                 {friendStatus === 'follower' && (
-                  <button className="game-card__btn" style={{ background: 'var(--accent-primary)', color: 'white', padding: '8px 16px', borderRadius: 'var(--radius-sm)' }} onClick={() => handleFriendAction('follow')}>
+                  <button style={{ background: 'var(--accent-primary)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => handleFriendAction('follow')}>
                     Follow Back
                   </button>
                 )}
                 {friendStatus === 'following' && (
-                  <button className="game-card__btn" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-dim)', padding: '8px 16px', borderRadius: 'var(--radius-sm)' }} onClick={() => handleFriendAction('unfollow')}>
-                    Following
+                  <button style={{ background: 'var(--bg-tertiary)', color: 'var(--text-dim)', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => handleFriendAction('unfollow')}>
+                    Unfollow
                   </button>
                 )}
                 {friendStatus === 'friends' && (
-                  <button className="game-card__btn" style={{ background: '#ef4444', color: 'white', padding: '8px 16px', borderRadius: 'var(--radius-sm)' }} onClick={() => handleFriendAction('unfollow')}>
+                  <button style={{ background: 'transparent', border: '1px solid var(--border)', color: '#ef4444', padding: '8px 16px', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 'bold' }} onClick={() => handleFriendAction('unfollow')}>
                     Unfriend
                   </button>
                 )}
               </div>
             )}
-
           </div>
         </div>
       </div>
 
-      {}
       <div className="profile-body">
 
-        {}
         <div className="profile-col profile-col--left">
-          {}
           <div className="profile-card">
             <div className="profile-card__header">
               <h3 className="profile-card__title">{t('about_me')}</h3>
@@ -308,7 +310,6 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
             )}
           </div>
 
-          {}
           <div className="profile-card">
             <div className="profile-card__header">
               <h3 className="profile-card__title">{t('working_on')}</h3>
@@ -343,11 +344,18 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
               </p>
             )}
           </div>
+
+          <div className="profile-card" style={{ marginTop: '24px' }}>
+            <div className="profile-card__header">
+              <h3 className="profile-card__title">Recent Games Played</h3>
+            </div>
+            <div className="profile-card__body">
+              <p className="profile-card__empty">No recent games played.</p>
+            </div>
+          </div>
         </div>
 
-        {}
         <div className="profile-col profile-col--right">
-          {}
           <div className="profile-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
             <button className={`admin-tab ${activeTab === 'submissions' ? 'active' : ''}`} onClick={() => setActiveTab('submissions')} style={{ background: 'none', border: 'none', color: activeTab === 'submissions' ? 'var(--text)' : 'var(--text-dim)', fontWeight: activeTab === 'submissions' ? 'bold' : 'normal', cursor: 'pointer' }}>
               Submissions
@@ -463,7 +471,7 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
                             <button onClick={async () => {
                               await fetch(`/api/friends/follow/${follower.id}`, { method: 'POST' });
                               fetch('/api/friends').then(r => r.json()).then(d => setFriendsData(d));
-                            }} style={{ background: 'var(--accent-primary)', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: '0.9rem' }}>Follow Back</button>
+                            }} style={{ flexShrink: 0, whiteSpace: 'nowrap', background: 'var(--accent-primary)', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold' }}>Follow Back</button>
                           </div>
                         ))}
                       </div>
@@ -481,10 +489,10 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
                               {following.avatarUrl ? <img src={following.avatarUrl} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%' }} /> : <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{following.displayName.charAt(0)}</div>}
                               <span style={{ fontWeight: 'bold' }}>{following.displayName}</span>
                             </div>
-                            <button onClick={async () => {
+                             <button onClick={async () => {
                               await fetch(`/api/friends/unfollow/${following.id}`, { method: 'POST' });
                               fetch('/api/friends').then(r => r.json()).then(d => setFriendsData(d));
-                            }} style={{ background: 'transparent', color: 'var(--text-dim)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: '0.9rem' }}>Unfollow</button>
+                            }} style={{ flexShrink: 0, whiteSpace: 'nowrap', background: 'var(--bg-tertiary)', color: 'var(--text-dim)', border: 'none', padding: '6px 12px', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold' }}>Unfollow</button>
                           </div>
                         ))}
                       </div>

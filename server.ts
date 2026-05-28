@@ -505,6 +505,12 @@ app.prepare().then(() => {
         res.status(400).json({ error: 'Invalid role' });
         return;
       }
+      const targetUser = await prisma.user.findUnique({ where: { id: req.params.id as string } });
+      if (targetUser && targetUser.role === 'owner') {
+        res.status(403).json({ error: 'Owners cannot be demoted through the UI.' });
+        return;
+      }
+
       const updatedUser = await prisma.user.update({
         where: { id: req.params.id as string },
         data: { role }
@@ -569,11 +575,29 @@ app.prepare().then(() => {
   
 
   server.get('/api/users/:id', async (req: Request, res: Response) => {
-    const user = getUserById(req.params.id as string);
+    const idParam = req.params.id as string;
+    let user;
+    if (!isNaN(Number(idParam))) {
+      user = await prisma.user.findFirst({ where: { playerId: Number(idParam) } });
+    } else {
+      user = await prisma.user.findUnique({ where: { id: idParam } });
+    }
+    
     if (!user) { res.status(404).json({ error: 'User not found.' }); return; }
-    const allSubmissions = await getSubmissionsByUser(user.id);
-    const submissions = allSubmissions.filter(s => s.status === 'approved');
-    res.json({ user, submissions });
+    
+    // Fetch followers and following counts
+    const followersCount = await prisma.follow.count({ where: { followingId: user.id } });
+    const followingCount = await prisma.follow.count({ where: { followerId: user.id } });
+
+    const allSubmissions = await prisma.submission.findMany({ where: { userId: user.id, status: 'approved' } });
+    const { passwordHash, ...publicUser } = user;
+    
+    res.json({ 
+      user: publicUser, 
+      submissions: allSubmissions,
+      followersCount,
+      followingCount
+    });
   });
 
   server.post('/api/auth/bio', async (req: Request, res: Response) => {

@@ -621,6 +621,7 @@ export default function AdminPage() {
                           value={u.role}
                           onChange={(e) => handleRoleChange(u.id, e.target.value)}
                           style={{ padding: '4px 8px', borderRadius: '4px', background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }}
+                          disabled={u.role === 'owner'}
                         >
                           <option value="user">User</option>
                           <option value="moderator">Moderator</option>
