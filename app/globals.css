@@ -167,6 +167,7 @@ h3 { font-size: var(--font-size-md); }
 #app-main {
   grid-column: 2 / -1;
   grid-row: 2 / -1;
+  min-width: 0;
 }
 #app-content {
   padding: var(--space-4) calc(var(--space-5) + 160px) var(--space-4) var(--space-5); /* Reserve 160px on right for ads */

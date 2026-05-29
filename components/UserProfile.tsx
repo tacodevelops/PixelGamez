@@ -8,6 +8,7 @@ import { useAuth } from './AuthContext';
 import { useI18n } from './I18nContext';
 import Image from 'next/image';
 import { games as allGames } from '../lib/data';
+import GameCarousel from './GameCarousel';
 
 interface ProfileUser {
   id: string;
@@ -375,60 +376,42 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
           </div>
 
           {activeTab === 'submissions' && (
-            <div className="profile-card">
-              <div className="profile-card__header">
-                <h3 className="profile-card__title">Games by {displayUser.displayName}</h3>
-              </div>
-              <div className="profile-card__body">
-                {submissions.length === 0 ? (
-                  <p className="profile-card__empty">{displayUser.displayName} hasn't published any games yet.</p>
-                ) : (
-                  <div className="game-grid game-grid--profile">
-                    {submissions.map(game => (
-                      <div key={game.id} className="game-card">
-                        <div className="game-card__thumb">
-                          <Image src={game.thumbnail || '/images/placeholder.jpg'} alt={game.title} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit: 'cover' }} />
-                          <div className="game-card__overlay">
-                            <button className="game-card__btn" onClick={() => window.location.href = `/game/${game.id}`}>Play</button>
-                          </div>
-                        </div>
-                        <div className="game-card__info">
-                          <h3 className="game-card__title" title={game.title}>{game.title}</h3>
-                          <span className="game-card__developer">{game.developerName}</span>
-                        </div>
-                      </div>
-                    ))}
+            <div className="profile-card-wrapper" style={{ marginBottom: 'var(--space-6)' }}>
+              {submissions.length === 0 ? (
+                <div className="profile-card">
+                  <div className="profile-card__header">
+                    <h3 className="profile-card__title">Games by {displayUser.displayName}</h3>
                   </div>
-                )}
-              </div>
+                  <div className="profile-card__body">
+                    <p className="profile-card__empty">{displayUser.displayName} hasn't published any games yet.</p>
+                  </div>
+                </div>
+              ) : (
+                <GameCarousel 
+                  title={`Games by ${displayUser.displayName}`} 
+                  games={submissions.map(sub => ({ ...sub, tags: sub.tags || [], id: sub.id.toString() } as any))} 
+                />
+              )}
             </div>
           )}
 
           {activeTab === 'favorites' && (
-            <div className="profile-card">
-              <div className="profile-card__header">
-                <h3 className="profile-card__title">Favorite Games</h3>
-              </div>
-              <div className="profile-card__body">
-                {displayUser.favoriteGames?.length === 0 ? (
-                  <p className="profile-card__empty">No favorite games yet.</p>
-                ) : (
-                  <div className="game-grid game-grid--profile">
-                    {displayUser.favoriteGames?.map(gameId => (
-                      <div key={gameId} className="game-card" onClick={() => window.location.href = `/game/${gameId}`} style={{ cursor: 'pointer' }}>
-                        <div className="game-card__thumb">
-                          <div style={{ width: '100%', height: '100%', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <span style={{ fontSize: '2rem' }}>🎮</span>
-                          </div>
-                        </div>
-                        <div className="game-card__info">
-                          <h3 className="game-card__title">Game ID: {gameId}</h3>
-                        </div>
-                      </div>
-                    ))}
+            <div className="profile-card-wrapper" style={{ marginBottom: 'var(--space-6)' }}>
+              {displayUser.favoriteGames?.length === 0 ? (
+                <div className="profile-card">
+                  <div className="profile-card__header">
+                    <h3 className="profile-card__title">Favorite Games</h3>
                   </div>
-                )}
-              </div>
+                  <div className="profile-card__body">
+                    <p className="profile-card__empty">No favorite games yet.</p>
+                  </div>
+                </div>
+              ) : (
+                <GameCarousel 
+                  title="Favorite Games" 
+                  games={(displayUser.favoriteGames || []).map(id => allGames.find(g => g.id === id)).filter(Boolean) as any} 
+                />
+              )}
             </div>
           )}
 

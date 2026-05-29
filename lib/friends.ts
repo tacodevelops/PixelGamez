@@ -31,13 +31,13 @@ export async function getFriendsAndFollows(userId: string) {
     prisma.follow.findMany({
       where: { followerId: userId },
       include: {
-        following: { select: { id: true, displayName: true, avatarUrl: true } }
+        following: { select: { id: true, playerId: true, displayName: true, avatarUrl: true } }
       }
     }),
     prisma.follow.findMany({
       where: { followingId: userId },
       include: {
-        follower: { select: { id: true, displayName: true, avatarUrl: true } }
+        follower: { select: { id: true, playerId: true, displayName: true, avatarUrl: true } }
       }
     })
   ]);
