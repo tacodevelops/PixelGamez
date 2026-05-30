@@ -111,16 +111,25 @@ export default function GamePlayer({ game }: GamePlayerProps) {
   return (
     <div className="game-player animate-scale-in">
       <div className="game-player__embed-wrapper" style={{ overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <iframe
-          id="game-iframe"
-          className="game-player__iframe"
-          src={game.embedUrl}
-          frameBorder="0"
-          scrolling="no"
-          allowFullScreen
-          referrerPolicy="no-referrer"
-          style={{ transform: `scale(${zoom})`, transformOrigin: 'center center', transition: 'transform 0.2s', width: '100%', height: '100%' }}
-        ></iframe>
+        {game.downloadUrl ? (
+          <div style={{ padding: '64px', textAlign: 'center', backgroundColor: 'var(--bg-secondary)', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '24px' }}>
+            <h2 style={{ margin: 0, color: 'var(--text-primary)' }}>This game must be downloaded to play</h2>
+            <a href={game.downloadUrl} download className="game-player__btn game-player__btn--fav active" style={{ padding: '16px 32px', fontSize: '1.2rem', backgroundColor: 'var(--accent-primary)', color: 'black', textDecoration: 'none', borderRadius: '8px', border: 'none', fontWeight: 'bold' }}>
+              Download Game
+            </a>
+          </div>
+        ) : (
+          <iframe
+            id="game-iframe"
+            className="game-player__iframe"
+            src={game.embedUrl}
+            frameBorder="0"
+            scrolling="no"
+            allowFullScreen
+            referrerPolicy="no-referrer"
+            style={{ transform: `scale(${zoom})`, transformOrigin: 'center center', transition: 'transform 0.2s', width: '100%', height: '100%' }}
+          ></iframe>
+        )}
       </div>
 
       <div className="game-player__controls">
