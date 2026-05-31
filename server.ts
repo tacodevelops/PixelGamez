@@ -164,6 +164,14 @@ app.prepare().then(() => {
         return;
       }
 
+      const existingName = await prisma.user.findFirst({
+        where: { displayName: { equals: displayName.trim(), mode: 'insensitive' } }
+      });
+      if (existingName) {
+        res.status(400).json({ error: 'This display name is already taken.' });
+        return;
+      }
+
       if (password.length < 6) {
         res.status(400).json({ error: 'Password must be at least 6 characters.' });
         return;
@@ -291,11 +299,19 @@ app.prepare().then(() => {
       });
 
       if (!user) {
+        let baseName = name || 'Google User';
+        let finalName = baseName;
+        let suffix = 1;
+        while (await prisma.user.findFirst({ where: { displayName: { equals: finalName, mode: 'insensitive' } } })) {
+          finalName = `${baseName}${suffix}`;
+          suffix++;
+        }
+
         // Create new user
         user = await prisma.user.create({
           data: {
             email: normalizedEmail,
-            displayName: name || 'Google User',
+            displayName: finalName,
             googleId,
             passwordHash: null,
             avatarUrl: picture || '',
@@ -366,6 +382,17 @@ app.prepare().then(() => {
     }
 
     try {
+      const existingName = await prisma.user.findFirst({
+        where: { 
+          displayName: { equals: displayName.trim(), mode: 'insensitive' },
+          id: { not: user.id }
+        }
+      });
+      if (existingName) {
+        res.status(400).json({ error: 'This display name is already taken.' });
+        return;
+      }
+
       const updatedUser = await prisma.user.update({
         where: { id: user.id },
         data: { displayName: displayName.trim() },
