@@ -14,7 +14,7 @@ interface GamePlayerProps {
 export default function GamePlayer({ game }: GamePlayerProps) {
   const { user, isLoggedIn, openAuthModal, toggleFavorite, addRecentGame } = useAuth();
   const { t } = useI18n();
-  const plays = usePlays(game.id, game.plays);
+  const plays = usePlays(game.id);
   const [likes, setLikes] = useState(0);
   const [dislikes, setDislikes] = useState(0);
   const [userVote, setUserVote] = useState<'like' | 'dislike' | null>(null);
@@ -147,7 +147,7 @@ export default function GamePlayer({ game }: GamePlayerProps) {
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="5 3 19 12 5 21 5 3"></polygon>
                 </svg>
-                {new Intl.NumberFormat('en-US', { notation: "compact", compactDisplay: "short", maximumFractionDigits: 1 }).format(plays)} Plays
+                {new Intl.NumberFormat('en-US', { notation: "compact", compactDisplay: "short", maximumFractionDigits: 1 }).format(plays ?? 0)} Plays
               </span>
               {game.tags.map(tag => (
                 <span key={tag} className={`game-player__tag game-player__tag--${tag}`}>{t(tag) || tag}</span>

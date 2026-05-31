@@ -60,12 +60,21 @@ export default function Header() {
       })
       .then(data => {
         if (Array.isArray(data)) {
-          setNotifications(data);
+          const clearedAt = parseInt(localStorage.getItem('clearedNotifsAt') || '0');
+          const validNotifs = data.filter(n => new Date(n.createdAt).getTime() > clearedAt);
+          
+          const uniqueMap = new Map();
+          for (const n of validNotifs) {
+            if (!uniqueMap.has(n.message)) uniqueMap.set(n.message, n);
+          }
+          const uniqueNotifs = Array.from(uniqueMap.values());
+          
+          setNotifications(uniqueNotifs);
           const lastRead = localStorage.getItem('lastReadNotificationAt');
           if (!lastRead) {
-            setUnreadCount(data.length);
+            setUnreadCount(uniqueNotifs.length);
           } else {
-            const unread = data.filter(n => new Date(n.createdAt) > new Date(lastRead)).length;
+            const unread = uniqueNotifs.filter(n => new Date(n.createdAt) > new Date(lastRead)).length;
             setUnreadCount(unread);
           }
         }
@@ -198,7 +207,7 @@ export default function Header() {
 
       <div className="header__right">
         <button className="header__theme-btn" onClick={handleRandomize} aria-label="Random Game" title="Play a random game">
-          <img src="/images/randomiser.png" alt="Random Game" width={20} height={20} style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
+          <img src="/images/randomiser.png" alt="Random Game" width={20} height={20} style={{ filter: theme === 'dark' ? 'invert(1)' : 'none', mixBlendMode: theme === 'dark' ? 'screen' : 'multiply' }} />
         </button>
         <LanguageSelector />
         
@@ -225,8 +234,20 @@ export default function Header() {
               </button>
               {isNotifOpen && (
                 <div className="header__notif-menu">
-                  <div className="header__notif-header">
+                  <div className="header__notif-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h4>Notices & Inbox</h4>
+                    {notifications.length > 0 && (
+                      <button 
+                        onClick={() => {
+                          localStorage.setItem('clearedNotifsAt', Date.now().toString());
+                          setNotifications([]);
+                          setUnreadCount(0);
+                        }}
+                        style={{ background: 'transparent', border: 'none', color: '#ff4444', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold' }}
+                      >
+                        Clear Inbox
+                      </button>
+                    )}
                   </div>
                   <div className="header__notif-list">
                     {notifications.length > 0 ? (

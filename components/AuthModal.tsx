@@ -5,8 +5,8 @@ import { useAuth } from './AuthContext';
 import { GoogleLogin } from '@react-oauth/google';
 
 export default function AuthModal() {
-  const { showAuthModal, closeAuthModal, login, loginWithGoogle, register, requestOTP } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register' | 'otp'>('login');
+  const { showAuthModal, closeAuthModal, login, loginWithGoogle, register, requestOTP, updateDisplayName } = useAuth();
+  const [mode, setMode] = useState<'login' | 'register' | 'otp' | 'set-display-name'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -80,6 +80,9 @@ export default function AuthModal() {
       setSubmitting(false);
       if (result.error) {
         setError(result.error);
+      } else if (result.isNewUser) {
+        setMode('set-display-name');
+        setSuccessMsg('Account created! Choose a display name.');
       } else {
         setSuccessMsg('Successfully logged in!');
         setTimeout(() => {
@@ -154,7 +157,7 @@ export default function AuthModal() {
             </div>
           )}
 
-          {mode !== 'otp' && (
+          {mode !== 'otp' && mode !== 'set-display-name' && (
             <>
               {mode === 'register' && (
                 <div className="auth-modal__field">

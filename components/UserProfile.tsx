@@ -6,6 +6,7 @@ import BioText from './BioText';
 import AdSlot from './AdSlot';
 import { useAuth } from './AuthContext';
 import { useI18n } from './I18nContext';
+import GameGrid from './GameGrid';
 import Image from 'next/image';
 import { games as allGames } from '../lib/data';
 import GameCarousel from './GameCarousel';
@@ -46,7 +47,7 @@ interface UserProfileProps {
 }
 
 export default function UserProfile({ profileUser, submissions }: UserProfileProps) {
-  const { user, updateBio, uploadAvatar, openAuthModal } = useAuth();
+  const { user, updateBio, updateDisplayName, uploadAvatar, openAuthModal } = useAuth();
   const { t } = useI18n();
   const isOwnProfile = user?.id === profileUser.id;
 
@@ -57,6 +58,9 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
   const [workingText, setWorkingText] = useState(displayUser.workingOn || '');
   const [saving, setSaving] = useState(false);
   const [showBannerOptions, setShowBannerOptions] = useState(false);
+  
+  const [editingDisplayName, setEditingDisplayName] = useState(false);
+  const [displayNameText, setDisplayNameText] = useState(displayUser.displayName || '');
 
   const [friendStatus, setFriendStatus] = useState<string>('none');
   const [friendsData, setFriendsData] = useState<any>(null);
@@ -93,20 +97,23 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
 
   const handleSaveAbout = async () => {
     setSaving(true);
-    try {
-      const res = await fetch('/api/auth/bio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ aboutMe: aboutText, workingOn: workingText })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setDisplayUser(data.user);
-        setEditingAbout(false);
-        setEditingWorking(false);
-      }
-    } catch {}
+    const { error } = await updateBio({ aboutMe: aboutText, workingOn: workingText });
     setSaving(false);
+    if (!error) {
+      setEditingAbout(false);
+      setEditingWorking(false);
+    }
+  };
+
+  const handleSaveDisplayName = async () => {
+    if (!displayNameText.trim() || displayNameText.trim().length < 3) return;
+    setSaving(true);
+    const { error } = await updateDisplayName(displayNameText);
+    setSaving(false);
+    if (!error) {
+      setEditingDisplayName(false);
+      setDisplayUser(prev => ({ ...prev, displayName: displayNameText }));
+    }
   };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -220,8 +227,29 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
             )}
           </div>
           <div className="profile-banner__info">
-            <div className="profile-banner__name-row">
-              <h1 className="profile-banner__name">{displayUser.displayName}</h1>
+            <div className="profile-banner__name-row" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {editingDisplayName ? (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    value={displayNameText}
+                    onChange={e => setDisplayNameText(e.target.value)}
+                    style={{ background: 'var(--surface-dark)', border: '1px solid var(--border)', color: 'white', padding: '4px 8px', borderRadius: '4px', fontSize: '1.2rem', fontWeight: 'bold' }}
+                    autoFocus
+                  />
+                  <button onClick={handleSaveDisplayName} disabled={saving} style={{ background: 'var(--primary)', border: 'none', color: 'white', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>{saving ? '...' : 'Save'}</button>
+                  <button onClick={() => setEditingDisplayName(false)} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'white', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
+                </div>
+              ) : (
+                <>
+                  <h1 className="profile-banner__name">{displayUser.displayName}</h1>
+                  {isOwnProfile && (
+                    <button onClick={() => setEditingDisplayName(true)} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px' }} title="Edit Display Name">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    </button>
+                  )}
+                </>
+              )}
               {displayUser.role === 'owner' && (
                 <span className="profile-banner__badge">Owner</span>
               )}
@@ -412,7 +440,7 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
                   </div>
                 </div>
               ) : (
-                <GameCarousel 
+                <GameGrid 
                   title={`Games by ${displayUser.displayName}`} 
                   games={submissions.map(sub => ({ ...sub, tags: (sub as any).tags || [], id: sub.id.toString() } as any))} 
                 />
@@ -432,7 +460,7 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
                   </div>
                 </div>
               ) : (
-                <GameCarousel 
+                <GameGrid 
                   title="Recently Played" 
                   games={(displayUser.recentGames || []).map(id => allGames.find(g => g.id === id)).filter(Boolean) as any} 
                 />
@@ -452,9 +480,9 @@ export default function UserProfile({ profileUser, submissions }: UserProfilePro
                   </div>
                 </div>
               ) : (
-                <GameCarousel 
+                <GameGrid 
                   title="Favorite Games" 
-                  games={(displayUser.favoriteGames || []).map(id => allGames.find(g => g.id === id)).filter(Boolean) as any} 
+                  games={displayUser.favoriteGames?.map(id => allGames.find(g => g.id === id)).filter(Boolean) as any || []} 
                 />
               )}
             </div>

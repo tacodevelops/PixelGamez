@@ -13,7 +13,7 @@ interface GameCardProps {
 
 const GameCard = React.memo(function GameCard({ game }: GameCardProps) {
   const { t } = useI18n();
-  const plays = usePlays(game.id, game.plays);
+  const plays = usePlays(game.id);
 
   return (
     <Link href={`/game/${game.id}`} className="game-card">
@@ -29,7 +29,7 @@ const GameCard = React.memo(function GameCard({ game }: GameCardProps) {
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polygon points="5 3 19 12 5 21 5 3"></polygon>
           </svg>
-          {new Intl.NumberFormat('en-US', { notation: "compact", compactDisplay: "short", maximumFractionDigits: 1 }).format(plays)}
+          {plays !== null ? new Intl.NumberFormat('en-US', { notation: "compact", compactDisplay: "short", maximumFractionDigits: 1 }).format(plays) : '...'}
         </span>
       </div>
       {game.tags.length > 0 && (

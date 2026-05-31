@@ -158,6 +158,24 @@ app.prepare().then(() => {
                 }
             });
             await prisma_1.prisma.verificationCode.delete({ where: { email: normalizedEmail } }).catch(() => { });
+            // Send welcome message
+            try {
+                const owner = await prisma_1.prisma.user.findFirst({ where: { role: 'owner' } });
+                if (owner && owner.id !== newUser.id) {
+                    const conv = await prisma_1.prisma.conversation.create({
+                        data: {
+                            isGroup: false,
+                            participants: { create: [{ userId: owner.id }, { userId: newUser.id }] }
+                        }
+                    });
+                    await prisma_1.prisma.message.create({
+                        data: { conversationId: conv.id, senderId: owner.id, text: `Welcome to PixelGamez, ${newUser.displayName}! We're glad to have you here.` }
+                    });
+                }
+            }
+            catch (err) {
+                console.error('Failed to send welcome msg:', err);
+            }
             const token = await (0, sessions_1.createSession)(newUser.id);
             res.cookie(sessions_1.SESSION_COOKIE_NAME, token, {
                 httpOnly: true,
@@ -233,6 +251,7 @@ app.prepare().then(() => {
             }
             const { sub: googleId, email, name, picture } = payload;
             const normalizedEmail = email ? email.toLowerCase().trim() : '';
+            let isNewUser = false;
             let user = await prisma_1.prisma.user.findFirst({
                 where: {
                     OR: [
@@ -255,6 +274,25 @@ app.prepare().then(() => {
                     },
                     include: { favoriteGames: { select: { id: true } } }
                 });
+                isNewUser = true;
+                // Send welcome message
+                try {
+                    const owner = await prisma_1.prisma.user.findFirst({ where: { role: 'owner' } });
+                    if (owner && owner.id !== user.id) {
+                        const conv = await prisma_1.prisma.conversation.create({
+                            data: {
+                                isGroup: false,
+                                participants: { create: [{ userId: owner.id }, { userId: user.id }] }
+                            }
+                        });
+                        await prisma_1.prisma.message.create({
+                            data: { conversationId: conv.id, senderId: owner.id, text: `Welcome to PixelGamez, ${user.displayName}! We're glad to have you here.` }
+                        });
+                    }
+                }
+                catch (err) {
+                    console.error('Failed to send welcome msg:', err);
+                }
             }
             else if (!user.googleId) {
                 // Link existing user to googleId
@@ -273,7 +311,7 @@ app.prepare().then(() => {
             });
             const { passwordHash: _ } = user, rest = __rest(user, ["passwordHash"]);
             const publicUser = Object.assign(Object.assign({}, rest), { favoriteGames: user.favoriteGames.map(g => g.id) });
-            res.json({ user: publicUser });
+            res.json({ user: publicUser, isNewUser });
         }
         catch (err) {
             console.error('Google Auth Error:', err);
@@ -287,6 +325,30 @@ app.prepare().then(() => {
             return;
         }
         res.json({ user });
+    });
+    server.post('/api/auth/display-name', async (req, res) => {
+        const user = await getAuthUser(req);
+        if (!user) {
+            res.status(401).json({ error: 'Not authenticated.' });
+            return;
+        }
+        const { displayName } = req.body;
+        if (!displayName || displayName.trim().length < 3) {
+            res.status(400).json({ error: 'Display name must be at least 3 characters.' });
+            return;
+        }
+        try {
+            const updatedUser = await prisma_1.prisma.user.update({
+                where: { id: user.id },
+                data: { displayName: displayName.trim() },
+                include: { favoriteGames: { select: { id: true } } }
+            });
+            const { passwordHash: _ } = updatedUser, rest = __rest(updatedUser, ["passwordHash"]);
+            res.json({ user: Object.assign(Object.assign({}, rest), { favoriteGames: updatedUser.favoriteGames.map(g => g.id) }) });
+        }
+        catch (err) {
+            res.status(500).json({ error: 'Failed to update display name.' });
+        }
     });
     server.post('/api/auth/avatar', avatarUpload.single('avatar'), async (req, res) => {
         const user = await getAuthUser(req);

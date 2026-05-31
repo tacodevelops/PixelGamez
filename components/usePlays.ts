@@ -3,12 +3,12 @@ import { useState, useEffect } from 'react';
 let cachedPlays: Record<string, number> | null = null;
 let fetchPromise: Promise<Record<string, number>> | null = null;
 
-export function usePlays(gameId: string, initialPlays: number) {
-  const [plays, setPlays] = useState(initialPlays);
+export function usePlays(gameId: string) {
+  const [plays, setPlays] = useState<number | null>(null);
 
   useEffect(() => {
     if (cachedPlays) {
-      setPlays(cachedPlays[gameId] ?? initialPlays);
+      setPlays(cachedPlays[gameId] ?? 0);
       return;
     }
     
@@ -25,9 +25,9 @@ export function usePlays(gameId: string, initialPlays: number) {
     }
 
     fetchPromise.then(data => {
-      setPlays(data[gameId] ?? initialPlays);
+      setPlays(data[gameId] ?? 0);
     });
-  }, [gameId, initialPlays]);
+  }, [gameId]);
 
   return plays;
 }

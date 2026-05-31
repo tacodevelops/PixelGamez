@@ -25,7 +25,7 @@ interface AuthContextType {
   openAuthModal: () => void;
   closeAuthModal: () => void;
   login: (email: string, password: string) => Promise<{ error?: string }>;
-  loginWithGoogle: (credential: string) => Promise<{ error?: string }>;
+  loginWithGoogle: (credential: string) => Promise<{ error?: string; isNewUser?: boolean }>;
   register: (email: string, password: string, displayName: string, code: string) => Promise<{ error?: string }>;
   requestOTP: (email: string) => Promise<{ error?: string }>;
   logout: () => Promise<void>;
@@ -34,6 +34,7 @@ interface AuthContextType {
   toggleFavorite: (gameId: string, action: 'add' | 'remove') => Promise<{ error?: string }>;
   addRecentGame: (gameId: string) => Promise<void>;
   refreshUser: () => Promise<void>;
+  updateDisplayName: (displayName: string) => Promise<{ error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await res.json();
     if (!res.ok) return { error: data.error || 'Google login failed.' };
     setUser(data.user);
-    return { success: true };
+    return { success: true, isNewUser: data.isNewUser };
   };
 
   const requestOTP = async (email: string) => {
@@ -137,6 +138,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return {};
   };
 
+  const updateDisplayName = async (displayName: string) => {
+    const res = await fetch('/api/auth/display-name', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName }),
+    });
+    const result = await res.json();
+    if (!res.ok) return { error: result.error || 'Update failed.' };
+    setUser(result.user);
+    return {};
+  };
+
   const toggleFavorite = async (gameId: string, action: 'add' | 'remove') => {
     const res = await fetch(`/api/auth/favorite/${gameId}`, {
       method: 'POST',
@@ -182,6 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toggleFavorite,
       addRecentGame,
       refreshUser,
+      updateDisplayName,
     }}>
       {children}
     </AuthContext.Provider>
