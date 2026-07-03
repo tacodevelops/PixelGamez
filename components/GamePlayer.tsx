@@ -20,7 +20,6 @@ export default function GamePlayer({ game }: GamePlayerProps) {
   const [userVote, setUserVote] = useState<'like' | 'dislike' | null>(null);
   const [isVoting, setIsVoting] = useState(false);
   const [isFaving, setIsFaving] = useState(false);
-  const [zoom, setZoom] = useState(1);
 
   const isFavorited = user?.favoriteGames?.includes(game.id) ?? false;
 
@@ -122,7 +121,7 @@ export default function GamePlayer({ game }: GamePlayerProps) {
             allowFullScreen
             referrerPolicy="no-referrer"
             sandbox={game.embedUrl.includes('itch.io') || game.embedUrl.includes('itch.zone') ? "allow-scripts allow-same-origin allow-popups allow-forms allow-pointer-lock allow-downloads" : undefined}
-            style={{ transform: `scale(${zoom})`, transformOrigin: 'center center', transition: 'transform 0.2s', width: '100%', height: '100%' }}
+            style={{ width: '100%', height: '100%' }}
           ></iframe>
       </div>
 
@@ -155,7 +154,7 @@ export default function GamePlayer({ game }: GamePlayerProps) {
               disabled={isVoting}
               title={!isLoggedIn ? 'Sign in to vote' : undefined}
             >
-              <span className="icon">👍</span> {likes}
+              <span className="icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg></span> {likes}
             </button>
             <button
               className={`game-player__btn game-player__btn--vote ${userVote === 'dislike' ? 'active' : ''}`}
@@ -163,7 +162,7 @@ export default function GamePlayer({ game }: GamePlayerProps) {
               disabled={isVoting}
               title={!isLoggedIn ? 'Sign in to vote' : undefined}
             >
-              <span className="icon">👎</span> {dislikes}
+              <span className="icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg></span> {dislikes}
             </button>
           </div>
           <button
@@ -180,15 +179,6 @@ export default function GamePlayer({ game }: GamePlayerProps) {
               )}
             </span> {isFavorited ? 'Favorited' : 'Favorite'}
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', marginRight: '8px' }}>
-            <button className="game-player__btn game-player__btn--zoom" onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} title="Zoom Out" style={{ padding: '8px' }}>
-              <span className="icon">➖</span>
-            </button>
-            <span style={{ fontSize: '0.9rem', opacity: 0.8, minWidth: '40px', textAlign: 'center' }}>{Math.round(zoom * 100)}%</span>
-            <button className="game-player__btn game-player__btn--zoom" onClick={() => setZoom(z => Math.min(3, z + 0.1))} title="Zoom In" style={{ padding: '8px' }}>
-              <span className="icon">➕</span>
-            </button>
-          </div>
         </div>
       </div>
 

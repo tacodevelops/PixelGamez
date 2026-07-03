@@ -85,7 +85,7 @@
   --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-bounce: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  --header-height: 56px;
+  --header-height: 72px;
   --sidebar-width: 200px;
 }
 
