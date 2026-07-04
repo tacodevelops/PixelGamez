@@ -83,9 +83,6 @@ export default function GamePlayer({ game }: GamePlayerProps) {
           body: JSON.stringify({ type, action: 'remove' }),
         });
         if (res.ok) {
-          const data = await res.json();
-          setLikes(data.likes);
-          setDislikes(data.dislikes);
           localStorage.removeItem(`vote_${game.id}`);
         } else {
           throw new Error('Failed to remove vote');
@@ -113,9 +110,6 @@ export default function GamePlayer({ game }: GamePlayerProps) {
           body: JSON.stringify({ type, action: 'add' }),
         });
         if (res.ok) {
-          const data = await res.json();
-          setLikes(data.likes);
-          setDislikes(data.dislikes);
           localStorage.setItem(`vote_${game.id}`, type);
         } else {
           throw new Error('Failed to add vote');
