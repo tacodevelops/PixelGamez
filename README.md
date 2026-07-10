@@ -1,8 +1,8 @@
 # PixelGamez 
 
-PixelGamez is a modern, feature-rich web platform for playing, discovering, and publishing web games (like .io games, HTML5 games, and Flash emulations). 
+https://www.pixelgamez.com/ PixelGamez is a modern, feature-rich web platform for playing, discovering, and publishing web games (like .io games, HTML5 games, and Flash emulations). 
 
-Built with Next.js 14, React, and a lightweight JSON-based backend, the platform is designed to be blazing fast, easily extendable, and highly community-driven.
+Built with Next.js 14, React, and a lightweight JSON-based backend, the platform is designed to be extremely fast, easily extendable, and highly community-driven!!
 
 ##  Key Features
 
