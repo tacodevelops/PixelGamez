@@ -1,5 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { Anton } from 'next/font/google'
+
+const anton = Anton({ subsets: ['latin'], weight: '400' })
 
 export const metadata: Metadata = {
   title: 'Site Map — PixelGamez',
@@ -68,10 +71,10 @@ export default function SiteMapPage() {
   return (
     <div className="min-h-screen bg-black text-white px-6 md:px-12 py-16 md:py-24">
       <div className="max-w-3xl mx-auto">
-        <p className="text-xs md:text-sm font-bold tracking-[0.2em] text-red-500 uppercase mb-4">
+        <p className="text-xs md:text-sm font-bold tracking-[0.2em] text-teal-400 uppercase mb-4">
           / Navigation
         </p>
-        <h1 className="text-5xl md:text-7xl font-black uppercase leading-[0.95] mb-16">
+        <h1 className={`${anton.className} text-5xl md:text-7xl uppercase leading-[0.95] mb-16`}>
           Site Map
         </h1>
 
@@ -79,7 +82,7 @@ export default function SiteMapPage() {
           <div key={link.href}>
             {i > 0 && <div className="border-t border-white/10 my-10" />}
             <Link href={link.href} className="group block">
-              <h2 className="text-xl md:text-2xl font-bold uppercase mb-2 group-hover:text-red-500 transition-colors">
+              <h2 className={`${anton.className} text-xl md:text-2xl uppercase mb-2 group-hover:text-teal-400 transition-colors`}>
                 {link.label}
               </h2>
               <p className="text-sm md:text-base opacity-70 leading-relaxed">
