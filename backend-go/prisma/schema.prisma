@@ -1,0 +1,184 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "go run github.com/steebchen/prisma-client-go"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                     String         @id @default(uuid())
+  playerId               Int            @unique @default(autoincrement())
+  email                  String         @unique
+  displayName            String
+  passwordHash           String?
+  googleId               String?        @unique
+  role                   String         @default("user")
+  avatarUrl              String         @default("")
+  bannerUrl              String         @default("")
+  createdAt              DateTime       @default(now())
+  aboutMe                String         @default("")
+  workingOn              String         @default("")
+  country                String         @default("")
+  recentGames            String[]       @default([])
+  
+  // Relations
+  favoriteGames          Game[]         @relation("UserFavorites")
+  votes                  Vote[]
+  sessions               Session[]
+  following              Follow[]       @relation("Following")
+  followers              Follow[]       @relation("Followers")
+  participants           Participant[]
+  messages               Message[]
+}
+
+model Game {
+  id             String   @id
+  title          String
+  description    String
+  category       String
+  tags           String[]
+  thumbnail      String
+  embedUrl       String
+  rating         Float    @default(0.0)
+  plays          Int      @default(0)
+  developerName  String?
+  developerLink  String?
+  steamUrl       String?
+  discordUrl     String?
+  bannerUrl      String?
+  createdAt      DateTime @default(now())
+
+  // Relations
+  favoritedBy    User[]   @relation("UserFavorites")
+  votes          Vote[]
+}
+
+model Submission {
+  id               String   @id @default(uuid())
+  title            String
+  description      String
+  category         String
+  gameType         String
+  embedUrl         String
+  gameFileUrl      String?
+  thumbnail        String?
+  thumbnailFileUrl String?
+  bannerUrl        String?
+  steamUrl         String?
+  discordUrl       String?
+  developerName    String
+  submitterEmail   String?
+  userId           String?
+  submittedAt      DateTime @default(now())
+  status           String   @default("pending") // pending, approved, rejected
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  plays            Int      @default(0)
+  rating           Float    @default(0)
+}
+
+model Vote {
+  id        String   @id @default(uuid())
+  type      String   // up, down
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  game      Game     @relation(fields: [gameId], references: [id])
+  gameId    String
+}
+
+model Session {
+  token     String   @id
+  expiresAt DateTime
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+}
+
+model Ad {
+  id          String   @id @default(uuid())
+  imageUrl    String
+  linkUrl     String
+  placement   String
+  label       String
+  active      Boolean  @default(true)
+  clicks      Int      @default(0)
+  impressions Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model VerificationCode {
+  email     String   @id
+  code      String
+  expiresAt DateTime
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  follower    User     @relation("Following", fields: [followerId], references: [id])
+  followerId  String
+  following   User     @relation("Followers", fields: [followingId], references: [id])
+  followingId String
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followingId])
+}
+
+model BrandInquiry {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  company   String?
+  budget    String?
+  message   String
+  status    String   @default("unread") // unread, read, archived
+  createdAt DateTime @default(now())
+}
+
+model Conversation {
+  id        String   @id @default(uuid())
+  isGroup   Boolean  @default(false)
+  name      String?
+  createdAt DateTime @default(now())
+
+  participants Participant[]
+  messages     Message[]
+}
+
+model Participant {
+  id             String       @id @default(uuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  joinedAt       DateTime     @default(now())
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderId       String
+  text           String
+  createdAt      DateTime     @default(now())
+}
