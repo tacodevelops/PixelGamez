@@ -136,3 +136,76 @@ func ProxyGame(c *fiber.Ctx) error {
 	c.Set("Content-Type", "text/html")
 	return c.SendString(html)
 }
+
+func GetVotes(c *fiber.Ctx) error {
+	gameId := c.Params("id")
+	ctx := context.Background()
+
+	likes, _ := database.Client.Vote.FindMany(
+		db.Vote.GameID.Equals(gameId),
+		db.Vote.Type.Equals("like"),
+	).Exec(ctx)
+
+	dislikes, _ := database.Client.Vote.FindMany(
+		db.Vote.GameID.Equals(gameId),
+		db.Vote.Type.Equals("dislike"),
+	).Exec(ctx)
+
+	return c.JSON(fiber.Map{
+		"likes":    len(likes),
+		"dislikes": len(dislikes),
+	})
+}
+
+type VoteBody struct {
+	Type   string `json:"type"`
+	Action string `json:"action"`
+}
+
+func VoteGame(c *fiber.Ctx) error {
+	userId := c.Locals("userId").(string)
+	gameId := c.Params("id")
+	ctx := context.Background()
+
+	var body VoteBody
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid body"})
+	}
+
+	if body.Action == "add" {
+		_, err := database.Client.Vote.CreateOne(
+			db.Vote.Type.Set(body.Type),
+			db.Vote.User.Link(db.User.ID.Equals(userId)),
+			db.Vote.Game.Link(db.Game.ID.Equals(gameId)),
+		).Exec(ctx)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to add vote"})
+		}
+	} else if body.Action == "remove" {
+		vote, err := database.Client.Vote.FindFirst(
+			db.Vote.UserID.Equals(userId),
+			db.Vote.GameID.Equals(gameId),
+			db.Vote.Type.Equals(body.Type),
+		).Exec(ctx)
+		if err == nil && vote != nil {
+			database.Client.Vote.FindUnique(
+				db.Vote.ID.Equals(vote.ID),
+			).Delete().Exec(ctx)
+		}
+	}
+
+	likes, _ := database.Client.Vote.FindMany(
+		db.Vote.GameID.Equals(gameId),
+		db.Vote.Type.Equals("like"),
+	).Exec(ctx)
+
+	dislikes, _ := database.Client.Vote.FindMany(
+		db.Vote.GameID.Equals(gameId),
+		db.Vote.Type.Equals("dislike"),
+	).Exec(ctx)
+
+	return c.JSON(fiber.Map{
+		"likes":    len(likes),
+		"dislikes": len(dislikes),
+	})
+}

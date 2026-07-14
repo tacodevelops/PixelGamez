@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../components/AuthContext';
+import { games as validGames } from '../../lib/data';
 
 interface Submission {
   id: string;
@@ -482,24 +483,31 @@ export default function AdminPage() {
             <div className="analytics-dashboard">
               {}
               <div className="analytics-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
-                <div className="admin-card" style={{ padding: 'var(--space-4)', textAlign: 'center' }}>
-                  <div style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '8px' }}>Total Global Plays</div>
-                  <div style={{ color: 'var(--accent-primary)', fontSize: '2rem', fontWeight: 'bold' }}>
-                    {analytics.reduce((acc, g) => acc + g.plays, 0).toLocaleString()}
-                  </div>
-                </div>
-                <div className="admin-card" style={{ padding: 'var(--space-4)', textAlign: 'center' }}>
-                  <div style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '8px' }}>Total Favorites</div>
-                  <div style={{ color: '#ef4444', fontSize: '2rem', fontWeight: 'bold' }}>
-                    {analytics.reduce((acc, g) => acc + (g._count?.favoritedBy || 0), 0).toLocaleString()}
-                  </div>
-                </div>
-                <div className="admin-card" style={{ padding: 'var(--space-4)', textAlign: 'center' }}>
-                  <div style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '8px' }}>Active Games</div>
-                  <div style={{ color: 'var(--text)', fontSize: '2rem', fontWeight: 'bold' }}>
-                    {analytics.length}
-                  </div>
-                </div>
+                {(() => {
+                  const validAnalytics = analytics.filter(g => validGames.some(vg => vg.id === g.id));
+                  return (
+                    <>
+                      <div className="admin-card" style={{ padding: 'var(--space-4)', textAlign: 'center' }}>
+                        <div style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '8px' }}>Total Global Plays</div>
+                        <div style={{ color: 'var(--accent-primary)', fontSize: '2rem', fontWeight: 'bold' }}>
+                          {validAnalytics.reduce((acc, g) => acc + g.plays, 0).toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="admin-card" style={{ padding: 'var(--space-4)', textAlign: 'center' }}>
+                        <div style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '8px' }}>Total Favorites</div>
+                        <div style={{ color: '#ef4444', fontSize: '2rem', fontWeight: 'bold' }}>
+                          {validAnalytics.reduce((acc, g) => acc + (g._count?.favoritedBy || 0), 0).toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="admin-card" style={{ padding: 'var(--space-4)', textAlign: 'center' }}>
+                        <div style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '8px' }}>Active Games</div>
+                        <div style={{ color: 'var(--text)', fontSize: '2rem', fontWeight: 'bold' }}>
+                          {validAnalytics.length}
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {}
@@ -531,7 +539,7 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {analytics.filter(g => g.title.toLowerCase().includes(analyticsSearch.toLowerCase())).map((game: any) => {
+                    {analytics.filter(g => validGames.some(vg => vg.id === g.id) && g.title.toLowerCase().includes(analyticsSearch.toLowerCase())).map((game: any) => {
                       const likes = game.votes?.filter((v: any) => v.type === 'like').length || 0;
                       const dislikes = game.votes?.filter((v: any) => v.type === 'dislike').length || 0;
                       const totalVotes = likes + dislikes;

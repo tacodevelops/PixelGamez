@@ -26,6 +26,9 @@ func setupGameRoutes(api fiber.Router) {
 	games.Get("/plays", controllers.GetGamePlays)
 	games.Post("/:id/play", controllers.TrackGamePlay)
 	
+	api.Get("/votes/:id", controllers.GetVotes)
+	api.Post("/votes/:id", middleware.RequireAuth, controllers.VoteGame)
+	
 	// proxy-game is top-level in original app
 	api.Get("/proxy-game", controllers.ProxyGame)
 }
