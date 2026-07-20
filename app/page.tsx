@@ -85,7 +85,7 @@ export default function Home() {
       )}
 
       {favoriteGames.length > 0 && (
-        <GameGrid title="Your Favorites" games={favoriteGames.slice(0, 12)} viewMoreLink={`/user/${(user as any)?.playerId || user?.id}`} />
+        <GameGrid title="Your Favorites" games={favoriteGames.slice(0, 12)} viewMoreLink="/liked" />
       )}
 
       {topPicks.length > 0 && (

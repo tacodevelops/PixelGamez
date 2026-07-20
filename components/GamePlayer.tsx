@@ -40,7 +40,7 @@ export default function GamePlayer({ game, detailedDescriptionHtml }: GamePlayer
 
   const fetchVotes = useCallback(async () => {
     try {
-      const res = await fetch(`/api/votes/${game.id}`);
+      const res = await fetch(`/api/votes/${game.id}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setLikes(data.likes);
@@ -75,8 +75,8 @@ export default function GamePlayer({ game, detailedDescriptionHtml }: GamePlayer
     try {
       if (userVote === type) {
         setUserVote(null);
-        if (type === 'like') setLikes(l => l - 1);
-        if (type === 'dislike') setDislikes(d => d - 1);
+        if (type === 'like') setLikes(l => Math.max(0, l - 1));
+        if (type === 'dislike') setDislikes(d => Math.max(0, d - 1));
 
         const res = await fetch(`/api/votes/${game.id}`, {
           method: 'POST',
@@ -85,6 +85,9 @@ export default function GamePlayer({ game, detailedDescriptionHtml }: GamePlayer
         });
         if (res.ok) {
           localStorage.removeItem(`vote_${game.id}`);
+          const data = await res.json();
+          setLikes(data.likes);
+          setDislikes(data.dislikes);
         } else {
           throw new Error('Failed to remove vote');
         }
@@ -92,10 +95,10 @@ export default function GamePlayer({ game, detailedDescriptionHtml }: GamePlayer
         setUserVote(type);
         if (type === 'like') {
             setLikes(l => l + 1);
-            if (previousUserVote === 'dislike') setDislikes(d => d - 1);
+            if (previousUserVote === 'dislike') setDislikes(d => Math.max(0, d - 1));
         } else {
             setDislikes(d => d + 1);
-            if (previousUserVote === 'like') setLikes(l => l - 1);
+            if (previousUserVote === 'like') setLikes(l => Math.max(0, l - 1));
         }
 
         if (previousUserVote) {
@@ -112,6 +115,9 @@ export default function GamePlayer({ game, detailedDescriptionHtml }: GamePlayer
         });
         if (res.ok) {
           localStorage.setItem(`vote_${game.id}`, type);
+          const data = await res.json();
+          setLikes(data.likes);
+          setDislikes(data.dislikes);
         } else {
           throw new Error('Failed to add vote');
         }

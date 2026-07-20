@@ -1,6 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { games, Game } from '../lib/data';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 const imagesDir = './public/images';
 const allowedExts = ['.png', '.webp', '.jfif', '.avif', '.jpeg', '.jpg'];
@@ -30,7 +33,13 @@ function guessCategory(name: string): string {
   return 'arcade';
 }
 
-function main() {
+async function main() {
+  const dbGames = await prisma.game.findMany({ select: { id: true, description: true } });
+  const dbDescriptions: Record<string, string> = {};
+  dbGames.forEach(g => {
+    if (g.description) dbDescriptions[g.id] = g.description;
+  });
+
   const files = fs.readdirSync(imagesDir);
   const imageFiles = files.filter(f => {
     const ext = path.extname(f).toLowerCase();
@@ -103,7 +112,8 @@ function main() {
     const discord = g.discordUrl ? `, discordUrl: '${g.discordUrl}'` : '';
     const createdAt = g.createdAt ? `, createdAt: '${g.createdAt}'` : '';
     
-    gamesStr += `  { id: '${g.id}', title: '${g.title.replace(/'/g, "\\'")}', description: '${g.description.replace(/'/g, "\\'")}', category: '${g.category}', tags: [${tagsStr}], thumbnail: '${g.thumbnail}', embedUrl: '${g.embedUrl}', rating: ${g.rating || 0}, plays: ${g.plays || 0}${devName}${devLink}${steam}${discord}${createdAt} },\n`;
+    const finalDesc = dbDescriptions[g.id] || g.description;
+    gamesStr += `  { id: '${g.id}', title: '${g.title.replace(/'/g, "\\'")}', description: '${finalDesc.replace(/'/g, "\\'")}', category: '${g.category}', tags: [${tagsStr}], thumbnail: '${g.thumbnail}', embedUrl: '${g.embedUrl}', rating: ${g.rating || 0}, plays: ${g.plays || 0}${devName}${devLink}${steam}${discord}${createdAt} },\n`;
   }
   gamesStr += '];';
 
@@ -125,6 +135,11 @@ function main() {
   content = content.substring(0, gamesStart) + gamesStr + content.substring(gamesEnd);
   fs.writeFileSync('./lib/data.ts', content);
   console.log(`Successfully synced! Total games: ${updatedGames.length}`);
+  await prisma.$disconnect();
 }
 
-main();
+main().catch(async (e) => {
+  console.error(e);
+  await prisma.$disconnect();
+  process.exit(1);
+});

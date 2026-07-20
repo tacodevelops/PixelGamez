@@ -120,7 +120,7 @@ export default function Header() {
     <header className="header">
       <div className="header__left">
         <Link href="/" className="header__logo">
-          <Image src="/images/logo/PixelGamezLogoNoBackround.png" alt="PixelGamez Logo" width={80} height={64} className="header__logo-icon" priority unoptimized />
+          <Image src="/images/logo/PixelGamezLogoNoBackround.png" alt="PixelGamez Logo" width={120} height={96} className="header__logo-icon" priority unoptimized />
         </Link>
       </div>
 
@@ -199,11 +199,7 @@ export default function Header() {
           <>
             <div className="header__user" ref={userMenuRef}>
               <button className="header__avatar" onClick={() => { setIsUserMenuOpen(!isUserMenuOpen); setIsEditingProfile(false); }} aria-label="User menu">
-                {user.avatarUrl ? (
-                  <Image src={user.avatarUrl} alt={user.displayName} width={32} height={32} className="header__avatar-img" style={{ objectFit: 'cover' }} unoptimized />
-                ) : (
-                  user.displayName.charAt(0).toUpperCase()
-                )}
+                {user.displayName.charAt(0).toUpperCase()}
               </button>
             {isUserMenuOpen && (
               <div className="header__user-menu">
@@ -211,11 +207,7 @@ export default function Header() {
                   <>
                     <div className="header__user-info">
                       <div className="header__user-avatar-row">
-                        {user.avatarUrl ? (
-                          <Image src={user.avatarUrl} alt="" width={64} height={64} className="header__user-avatar-large" style={{ objectFit: 'cover' }} unoptimized />
-                        ) : (
-                          <div className="header__user-avatar-placeholder">{user.displayName.charAt(0).toUpperCase()}</div>
-                        )}
+                        <div className="header__user-avatar-placeholder">{user.displayName.charAt(0).toUpperCase()}</div>
                         <div>
                           <div className="header__user-name">{user.displayName}</div>
                           <div className="header__user-email">{user.email}</div>
@@ -225,10 +217,6 @@ export default function Header() {
                       </div>
                     </div>
                     <div className="header__user-divider"></div>
-                    <Link href={`/user/${(user as any).playerId || user.id}`} className="header__user-link" onClick={() => setIsUserMenuOpen(false)}>
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                      {t('profile')}
-                    </Link>
                     {(isOwner || isModerator) && (
                       <Link href="/admin" className="header__user-link" onClick={() => setIsUserMenuOpen(false)}>
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>

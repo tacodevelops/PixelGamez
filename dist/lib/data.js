@@ -320,12 +320,21 @@ function getNewGames() {
     });
 }
 function getTrendingGames(playsMap) {
-    return exports.games.filter(g => g.tags.includes('trending')).sort((a, b) => {
+    const trending = exports.games.filter(g => g.tags.includes('trending'));
+    if (trending.length > 0) {
+        return trending.sort((a, b) => {
+            var _a, _b;
+            const aPlays = (_a = playsMap === null || playsMap === void 0 ? void 0 : playsMap[a.id]) !== null && _a !== void 0 ? _a : a.plays;
+            const bPlays = (_b = playsMap === null || playsMap === void 0 ? void 0 : playsMap[b.id]) !== null && _b !== void 0 ? _b : b.plays;
+            return bPlays - aPlays;
+        });
+    }
+    return [...exports.games].sort((a, b) => {
         var _a, _b;
         const aPlays = (_a = playsMap === null || playsMap === void 0 ? void 0 : playsMap[a.id]) !== null && _a !== void 0 ? _a : a.plays;
         const bPlays = (_b = playsMap === null || playsMap === void 0 ? void 0 : playsMap[b.id]) !== null && _b !== void 0 ? _b : b.plays;
         return bPlays - aPlays;
-    });
+    }).slice(0, 18);
 }
 function getUpAndComingGames(playsMap) {
     const now = Date.now();
@@ -348,11 +357,15 @@ function getMostVisitedGames(playsMap) {
     return list.sort((a, b) => b.plays - a.plays);
 }
 function getRecommendedGames() {
-    return exports.games.filter(g => g.rating >= 4.5).sort((a, b) => {
-        if (b.rating === a.rating)
-            return b.plays - a.plays;
-        return b.rating - a.rating;
-    });
+    const recommended = exports.games.filter(g => g.rating >= 4.5);
+    if (recommended.length > 0) {
+        return recommended.sort((a, b) => {
+            if (b.rating === a.rating)
+                return b.plays - a.plays;
+            return b.rating - a.rating;
+        });
+    }
+    return [...exports.games].sort((a, b) => b.plays - a.plays).slice(0, 18);
 }
 function searchGames(query) {
     const q = query.toLowerCase().trim();

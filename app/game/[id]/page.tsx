@@ -5,6 +5,29 @@ import GameCard from '../../../components/GameCard';
 import { notFound } from 'next/navigation';
 import * as fs from 'fs';
 import * as path from 'path';
+import { Metadata } from 'next';
+import { prisma } from '../../../lib/prisma';
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const game = getGameById(id);
+  if (!game) return { title: 'Game Not Found' };
+  
+  let seoDescription = game.description;
+  try {
+    const dbGame = await prisma.game.findUnique({ where: { id }, select: { description: true } });
+    if (dbGame && dbGame.description) {
+      seoDescription = dbGame.description;
+    }
+  } catch (e) {
+    // Ignore error, fallback to static description
+  }
+  
+  return {
+    title: `${game.title} - Play Free on PixelGamez`,
+    description: seoDescription,
+  };
+}
 
 const manualMap: Record<string, string> = {
   'gartic-phone-io': 'GarticPhone.txt',

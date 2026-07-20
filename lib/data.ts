@@ -361,11 +361,19 @@ export function getNewGames(): Game[] {
 }
 
 export function getTrendingGames(playsMap?: Record<string, number>): Game[] {
-  return games.filter(g => g.tags.includes('trending')).sort((a, b) => {
+  const trending = games.filter(g => g.tags.includes('trending'));
+  if (trending.length > 0) {
+    return trending.sort((a, b) => {
+      const aPlays = playsMap?.[a.id] ?? a.plays;
+      const bPlays = playsMap?.[b.id] ?? b.plays;
+      return bPlays - aPlays;
+    });
+  }
+  return [...games].sort((a, b) => {
     const aPlays = playsMap?.[a.id] ?? a.plays;
     const bPlays = playsMap?.[b.id] ?? b.plays;
     return bPlays - aPlays;
-  });
+  }).slice(0, 18);
 }
 
 export function getUpAndComingGames(playsMap?: Record<string, number>): Game[] {
@@ -390,12 +398,16 @@ export function getMostVisitedGames(playsMap?: Record<string, number>): Game[] {
 }
 
 export function getRecommendedGames(): Game[] {
-
-  return games.filter(g => g.rating >= 4.5).sort((a, b) => {
-    if (b.rating === a.rating) return b.plays - a.plays;
-    return b.rating - a.rating;
-  });
+  const recommended = games.filter(g => g.rating >= 4.5);
+  if (recommended.length > 0) {
+    return recommended.sort((a, b) => {
+      if (b.rating === a.rating) return b.plays - a.plays;
+      return b.rating - a.rating;
+    });
+  }
+  return [...games].sort((a, b) => b.plays - a.plays).slice(0, 18);
 }
+
 
 export function searchGames(query: string): Game[] {
   const q = query.toLowerCase().trim();

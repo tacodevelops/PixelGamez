@@ -959,6 +959,25 @@ app.prepare().then(() => {
     }
   });
 
+  server.put('/api/admin/games/:id', async (req: Request, res: Response) => {
+    const user = await getAuthUser(req);
+    if (!user || user.role !== 'owner') {
+      res.status(403).json({ error: 'Access denied' });
+      return;
+    }
+    try {
+      const gameId = req.params.id as string;
+      const { description } = req.body;
+      const updated = await prisma.game.update({
+        where: { id: gameId },
+        data: { description }
+      });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update game' });
+    }
+  });
+
   server.get('/api/admin/analytics/:id', async (req: Request, res: Response) => {
     const user = await getAuthUser(req);
     if (!user || user.role !== 'owner') {

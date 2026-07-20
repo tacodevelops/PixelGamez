@@ -42,11 +42,13 @@ export default function AdminPage() {
 
   
   const [ads, setAds] = useState<Ad[]>([]);
-  const [fetchingAds, setFetchingAds] = useState(true);
+  const [fetchingAds, setFetchingAds] = useState(false);
   const [adForm, setAdForm] = useState({ linkUrl: '', placement: 'sidebar', label: 'Advertisement' });
   const [adImage, setAdImage] = useState<File | null>(null);
   const [uploadingAd, setUploadingAd] = useState(false);
   const adImageInputRef = useRef<HTMLInputElement>(null);
+  const [editingDescriptionId, setEditingDescriptionId] = useState<string | null>(null);
+  const [editDescriptionContent, setEditDescriptionContent] = useState<string>('');
 
   
   const [notices, setNotices] = useState<any[]>([]);
@@ -264,6 +266,25 @@ export default function AdminPage() {
       }
     } catch {
       
+    }
+  }
+
+  async function handleSaveDescription(id: string) {
+    try {
+      const res = await fetch(`/api/admin/games/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: editDescriptionContent })
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setAnalytics(prev => prev.map(a => a.id === id ? { ...a, description: updated.description } : a));
+        setEditingDescriptionId(null);
+      } else {
+        alert('Failed to save description');
+      }
+    } catch {
+      alert('Failed to save description');
     }
   }
 
@@ -549,6 +570,7 @@ export default function AdminPage() {
                       <th style={{ padding: '16px' }}>Total Plays</th>
                       <th style={{ padding: '16px' }}>Rating Ratio</th>
                       <th style={{ padding: '16px' }}>Favorites</th>
+                      <th style={{ padding: '16px' }}>SEO Description</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -559,10 +581,10 @@ export default function AdminPage() {
                       const likeRatio = totalVotes > 0 ? (likes / totalVotes) * 100 : 0;
                       
                       return (
-                        <tr key={game.id} onClick={() => window.location.href = `/admin/analytics/${game.id}`} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer' }} className="analytics-row-hover">
-                          <td style={{ padding: '16px', fontWeight: 'bold', color: 'var(--text)' }}>{game.title}</td>
-                          <td style={{ padding: '16px', color: 'var(--accent-primary)', fontWeight: 'bold' }}>{game.plays.toLocaleString()}</td>
-                          <td style={{ padding: '16px' }}>
+                        <tr key={game.id} style={{ borderBottom: '1px solid var(--border)' }} className="analytics-row-hover">
+                          <td style={{ padding: '16px', fontWeight: 'bold', color: 'var(--text)', cursor: 'pointer' }} onClick={() => window.location.href = `/admin/analytics/${game.id}`}>{game.title}</td>
+                          <td style={{ padding: '16px', color: 'var(--accent-primary)', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => window.location.href = `/admin/analytics/${game.id}`}>{game.plays.toLocaleString()}</td>
+                          <td style={{ padding: '16px', cursor: 'pointer' }} onClick={() => window.location.href = `/admin/analytics/${game.id}`}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                               <span style={{ minWidth: '40px', fontSize: '0.85rem' }}>{likeRatio.toFixed(0)}%</span>
                               <div style={{ width: '100px', height: '6px', background: 'var(--bg-tertiary)', borderRadius: '3px', overflow: 'hidden' }}>
@@ -571,10 +593,37 @@ export default function AdminPage() {
                               <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>({totalVotes} votes)</span>
                             </div>
                           </td>
-                          <td style={{ padding: '16px' }}>
+                          <td style={{ padding: '16px', cursor: 'pointer' }} onClick={() => window.location.href = `/admin/analytics/${game.id}`}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444' }}>
                               ♥ {game._count?.favoritedBy || 0}
                             </div>
+                          </td>
+                          <td style={{ padding: '16px' }}>
+                            {editingDescriptionId === game.id ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <textarea
+                                  value={editDescriptionContent}
+                                  onChange={(e) => setEditDescriptionContent(e.target.value)}
+                                  style={{ width: '100%', minHeight: '60px', padding: '8px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-tertiary)', color: 'var(--text)', fontFamily: 'inherit' }}
+                                />
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  <button onClick={() => handleSaveDescription(game.id)} style={{ background: 'var(--accent-primary)', color: 'var(--bg-primary)', padding: '4px 8px', borderRadius: '4px', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>Save</button>
+                                  <button onClick={() => setEditingDescriptionId(null)} style={{ background: 'var(--bg-tertiary)', color: 'var(--text)', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border)', cursor: 'pointer', fontSize: '0.8rem' }}>Cancel</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                                <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={game.description}>
+                                  {game.description || 'No description'}
+                                </div>
+                                <button 
+                                  onClick={() => { setEditingDescriptionId(game.id); setEditDescriptionContent(game.description || ''); }}
+                                  style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-dim)', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
+                                >
+                                  Edit
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );
