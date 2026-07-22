@@ -40,8 +40,16 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('pixelgamez_user');
+      if (stored) {
+        try { return JSON.parse(stored); } catch {}
+      }
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState(!user);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   const fetchUser = useCallback(async () => {
@@ -49,8 +57,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await fetch('/api/auth/me');
       const data = await res.json();
       setUser(data.user || null);
+      if (data.user) {
+        localStorage.setItem('pixelgamez_user', JSON.stringify(data.user));
+      } else {
+        localStorage.removeItem('pixelgamez_user');
+      }
     } catch {
       setUser(null);
+      localStorage.removeItem('pixelgamez_user');
     } finally {
       setLoading(false);
     }

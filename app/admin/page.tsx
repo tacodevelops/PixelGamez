@@ -574,7 +574,9 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {analytics.filter(g => validGames.some(vg => vg.id === g.id) && g.title.toLowerCase().includes(analyticsSearch.toLowerCase())).map((game: any) => {
+                    {validGames.filter(vg => vg.title.toLowerCase().includes(analyticsSearch.toLowerCase())).map((vg: any) => {
+                      const gameAnalytics = analytics.find((a: any) => a.id === vg.id) || { plays: 0, votes: [], _count: { favoritedBy: 0 } };
+                      const game = { ...vg, ...gameAnalytics, title: vg.title };
                       const likes = game.votes?.filter((v: any) => v.type === 'like').length || 0;
                       const dislikes = game.votes?.filter((v: any) => v.type === 'dislike').length || 0;
                       const totalVotes = likes + dislikes;

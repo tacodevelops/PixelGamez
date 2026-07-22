@@ -170,6 +170,7 @@ export default function GamePlayer({ game, detailedDescriptionHtml }: GamePlayer
           <div className="game-player__votes">
             <button
               className={`game-player__btn game-player__btn--vote ${userVote === 'like' ? 'active' : ''}`}
+              style={userVote === 'like' ? { borderColor: '#10b981', boxShadow: '0 0 8px rgba(16, 185, 129, 0.4)', color: '#10b981' } : {}}
               onClick={() => handleVote('like')}
               disabled={isVoting}
               title={!isLoggedIn ? 'Sign in to vote' : undefined}
@@ -178,6 +179,7 @@ export default function GamePlayer({ game, detailedDescriptionHtml }: GamePlayer
             </button>
             <button
               className={`game-player__btn game-player__btn--vote ${userVote === 'dislike' ? 'active' : ''}`}
+              style={userVote === 'dislike' ? { borderColor: '#ef4444', boxShadow: '0 0 8px rgba(239, 68, 68, 0.4)', color: '#ef4444' } : {}}
               onClick={() => handleVote('dislike')}
               disabled={isVoting}
               title={!isLoggedIn ? 'Sign in to vote' : undefined}
@@ -187,6 +189,7 @@ export default function GamePlayer({ game, detailedDescriptionHtml }: GamePlayer
           </div>
           <button
             className={`game-player__btn game-player__btn--fav ${isFavorited ? 'active' : ''}`}
+            style={isFavorited ? { borderColor: '#ef4444', boxShadow: '0 0 8px rgba(239, 68, 68, 0.4)', color: '#ef4444' } : {}}
             onClick={handleFavorite}
             disabled={isFaving}
             title={!isLoggedIn ? 'Sign in to favorite' : isFavorited ? 'Remove from favorites' : 'Add to favorites'}

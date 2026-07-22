@@ -2,6 +2,7 @@ import { getGameById, getRelatedGames } from '../../../lib/data';
 import GamePlayer from '../../../components/GamePlayer';
 import GameGrid from '../../../components/GameGrid';
 import GameCard from '../../../components/GameCard';
+import AdSlot from '../../../components/AdSlot';
 import { notFound } from 'next/navigation';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -125,7 +126,7 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
   }
 
   const detailedDescriptionHtml = await loadDescription(game.id, game.title);
-  const relatedGames = getRelatedGames(game.id, 12);
+  const relatedGames = getRelatedGames(game.id, 30);
 
   return (
     <div className="game-page animate-fade-in">
@@ -146,7 +147,16 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
       </div>
 
       {relatedGames.length > 6 && (
-        <GameGrid title="More Games You Might Like" games={relatedGames.slice(6)} />
+        <GameGrid title="More Games You Might Like" games={relatedGames.slice(6, 18)} />
+      )}
+
+      {relatedGames.length > 18 && (
+        <>
+          <div style={{ margin: '32px 0' }}>
+            <AdSlot placement="game-bottom" />
+          </div>
+          <GameGrid title="" games={relatedGames.slice(18, 30)} />
+        </>
       )}
     </div>
   );
